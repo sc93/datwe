@@ -1,7 +1,8 @@
 import "./globals.css";
 
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Noto_Sans_KR } from "next/font/google";
+import Image from "next/image";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -11,6 +12,11 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+});
+const notoSansKr = Noto_Sans_KR({
+  variable: "--font-noto-sans-kr",
+  subsets: ["latin", "latin-ext"],
+  weight: ["400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -25,7 +31,27 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>{children}</body>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} ${notoSansKr.variable} bg-gray-50 antialiased`}
+      >
+        <header className="sticky top-0 right-0 left-0 z-50 mx-auto h-15 max-w-2xl bg-white py-2">
+          <Image
+            src="/logo.svg"
+            alt="Datwe"
+            width={100}
+            height={44}
+            className="mx-auto"
+          />
+        </header>
+
+        <main className="mx-auto max-w-2xl bg-white">{children}</main>
+        <footer className="bg-background mx-auto max-w-2xl py-10">
+          <p className="text-center text-sm text-gray-500">
+            조건 추가 문의 :{" "}
+            <a href="mailto:devssc93@gmail.com">devssc93@gmail.com</a>
+          </p>
+        </footer>
+      </body>
     </html>
   );
 }
