@@ -31,6 +31,16 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <meta
+          name="google-site-verification"
+          content="Ij37Fo71XLQ_7jIt4HEnRKeRYveFfyMUwhVnrVgXMNI"
+        />
+        <meta
+          name="naver-site-verification"
+          content="78620915d4073b38f73f28eb83c6722017bc62b9"
+        />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${notoSansKr.variable} bg-gray-50 antialiased`}
       >
