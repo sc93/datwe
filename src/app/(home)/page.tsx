@@ -42,7 +42,7 @@ export const metadata: Metadata = {
 };
 
 /** 동행복권 기준 마지막 회차 (필요 시 수동 갱신) */
-const LAST_DRAW = 1209;
+const LAST_DRAW = 1213;
 
 export default async function Home() {
   const recentDraws = await fetchLast6Draws(LAST_DRAW);
