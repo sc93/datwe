@@ -44,7 +44,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${notoSansKr.variable} bg-gray-50 antialiased`}
       >
-        <header className="sticky top-0 right-0 left-0 z-50 mx-auto h-15 max-w-2xl bg-white py-2">
+        <header className="sticky top-0 right-0 left-0 z-50 mx-auto h-15 max-w-150 bg-white py-2">
           <Image
             src="/logo.svg"
             alt="Datwe"
@@ -54,8 +54,8 @@ export default function RootLayout({
           />
         </header>
 
-        <main className="mx-auto max-w-2xl bg-white">{children}</main>
-        <footer className="bg-background mx-auto max-w-2xl py-10">
+        <main className="mx-auto max-w-150 bg-white">{children}</main>
+        <footer className="bg-background mx-auto max-w-150 py-10">
           <p className="text-center text-sm text-gray-500">
             조건 추가 문의 :{" "}
             <a href="mailto:devssc93@gmail.com">devssc93@gmail.com</a>

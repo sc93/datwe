@@ -1,11 +1,12 @@
 // app/layout.tsx 또는 app/page.tsx
 import { Metadata } from "next";
 
+import { fetchRecentDraws } from "@/lib/lotto-dhlottery";
+
 import GenBtn from "./_components/gen-btn";
 import LottoDrawsProvider from "./_components/lotto-draws-provider";
 import Numbers from "./_components/numbers";
 import Option from "./_components/option";
-import { fetchLast6Draws } from "./_lib/lotto-api";
 
 export const metadata: Metadata = {
   title: "다퇴 | 다음 주엔 퇴사한다 - 로또 번호 만들기",
@@ -41,20 +42,22 @@ export const metadata: Metadata = {
   },
 };
 
-/** 동행복권 기준 마지막 회차 (필요 시 수동 갱신) */
-const LAST_DRAW = 1213;
-
 export default async function Home() {
-  const recentDraws = await fetchLast6Draws(LAST_DRAW);
+  const result = await fetchRecentDraws();
+  const recentDraws = result?.draws ?? [];
 
   return (
     <LottoDrawsProvider recentDraws={recentDraws}>
-      <div className="min-h-[calc(100vh-140px)] bg-white px-4 pt-5 pb-24">
+      <div className="min-h-[calc(100vh-140px)] max-w-150 bg-white px-4 pt-5 pb-24">
+        <p className="text-right text-base font-semibold text-zinc-500">
+          최근 회차: {result?.latestEpisode}
+        </p>
+        <div className="h-2.5" />
         <Option />
         <Numbers />
       </div>
 
-      <div className="sticky right-0 bottom-0 left-0 z-50 mx-auto h-20 max-w-2xl border-t border-zinc-200 bg-white px-4 py-3">
+      <div className="sticky right-0 bottom-0 left-0 z-50 mx-auto h-20 max-w-150 border-t border-zinc-200 bg-white px-4 py-3">
         <GenBtn />
       </div>
     </LottoDrawsProvider>

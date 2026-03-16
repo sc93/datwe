@@ -26,6 +26,7 @@ export type LottoOptionInputs = {
   bossName: string | null;
   salaryDay: number | null; // 1-31
   oddCount: number | null; // 0-6 (홀수 개수)
+  carryOverNumber: number | null;
 };
 
 /** 최근 5회차에 한 번이라도 나온 번호 집합 */
@@ -131,10 +132,12 @@ function oddCountMatch(nums: number[], k: number): boolean {
   return odds === k;
 }
 
-/**
- * 선택된 조건을 반영해 로또 번호 6개 생성.
- */
-export function generateLottoNumbers(
+type CandidatePoolBase = {
+  pool: number[];
+  lastDraw: number[];
+};
+
+export function getCandidatePool(
   selectedOptions: Set<LottoOptionId>,
   recentDraws: number[][] = [],
   inputs: LottoOptionInputs = {
@@ -143,8 +146,9 @@ export function generateLottoNumbers(
     bossName: null,
     salaryDay: null,
     oddCount: null,
+    carryOverNumber: null,
   },
-): number[] | null {
+): CandidatePoolBase | null {
   let pool: number[] = Array.from({ length: 45 }, (_, i) => i + 1);
 
   // 최근 5회차 미출현
@@ -153,18 +157,30 @@ export function generateLottoNumbers(
     recentDraws.length > 0
   ) {
     const appeared = getAppearedInRecentDraws(recentDraws);
-    pool = pool.filter((n) => !appeared.has(n));
+    const protectedSet = new Set<number>();
+    if (
+      inputs.luckyNumber != null &&
+      inputs.luckyNumber >= 1 &&
+      inputs.luckyNumber <= 45
+    ) {
+      protectedSet.add(inputs.luckyNumber);
+    }
+    if (inputs.carryOverNumber != null) {
+      protectedSet.add(inputs.carryOverNumber);
+    }
+    if (inputs.bossName && inputs.bossName.trim().length > 0) {
+      let n = getStrokeCount(inputs.bossName.trim());
+      while (n > 45) n -= 45;
+      if (n < 1) n = 1;
+      protectedSet.add(n);
+    }
+    pool = pool.filter(
+      (n) => !appeared.has(n) || protectedSet.has(n),
+    );
     if (pool.length < 6) return null;
   }
 
-  // 상사 이름 획수 제외: getStrokeCount로 제외할 번호 1개 (1~45)
-  if (selectedOptions.has("boss-name-exclusion") && inputs.bossName?.trim()) {
-    let exclude = getStrokeCount(inputs.bossName.trim());
-    while (exclude > 45) exclude -= 45;
-    if (exclude < 1) exclude = 1;
-    pool = pool.filter((n) => n !== exclude);
-    if (pool.length < 6) return null;
-  }
+  // 상사 이름 획수는 이제 "포함" 옵션이므로, 풀 자체는 건드리지 않음
 
   const needLucky =
     selectedOptions.has("include-lucky-number") &&
@@ -200,7 +216,18 @@ export function generateLottoNumbers(
     inputs.resignDay <= 31 &&
     pool.includes(inputs.resignDay);
 
-  const random = Math.random;
+  const needBossInclude =
+    selectedOptions.has("boss-name-exclusion") &&
+    inputs.bossName != null &&
+    inputs.bossName.trim().length > 0;
+  const bossNumber = needBossInclude
+    ? (() => {
+        let n = getStrokeCount(inputs.bossName!.trim());
+        while (n > 45) n -= 45;
+        if (n < 1) n = 1;
+        return n;
+      })()
+    : null;
 
   const needSumCondition = selectedOptions.has("sum-between-100-and-170");
   const needOddCount =
@@ -212,10 +239,112 @@ export function generateLottoNumbers(
   const needBalanced = selectedOptions.has("balanced-section");
   const needNoDiagonal = selectedOptions.has("diagonal-pattern");
 
+  // 행운 번호 / 이름 획수 / 이월수는 선택 가능한 번호 목록에 항상 표시되도록 보정
+  const fixedForPool = new Set<number>();
+  if (
+    inputs.luckyNumber != null &&
+    inputs.luckyNumber >= 1 &&
+    inputs.luckyNumber <= 45
+  ) {
+    fixedForPool.add(inputs.luckyNumber);
+  }
+  if (needBossInclude && bossNumber != null) {
+    fixedForPool.add(bossNumber);
+  }
+  if (
+    selectedOptions.has("carry-over-one") &&
+    inputs.carryOverNumber != null &&
+    inputs.carryOverNumber >= 1 &&
+    inputs.carryOverNumber <= 45
+  ) {
+    fixedForPool.add(inputs.carryOverNumber);
+  }
+  for (const n of fixedForPool) {
+    if (!pool.includes(n)) {
+      pool.push(n);
+    }
+  }
+
+  if (
+    !needSumCondition &&
+    !needOddCount &&
+    !needNoSerial &&
+    !needBalanced &&
+    !needNoDiagonal
+  ) {
+    const lastDraw =
+      recentDraws.length > 0 ? recentDraws[recentDraws.length - 1] : [];
+    return { pool, lastDraw };
+  }
+
   const lastDraw =
     recentDraws.length > 0 ? recentDraws[recentDraws.length - 1] : [];
 
+  return { pool, lastDraw };
+}
+
+/**
+ * 선택된 조건을 반영해 로또 번호 6개 생성.
+ */
+export function generateLottoNumbers(
+  selectedOptions: Set<LottoOptionId>,
+  recentDraws: number[][] = [],
+  inputs: LottoOptionInputs = {
+    luckyNumber: null,
+    resignDay: null,
+    bossName: null,
+    salaryDay: null,
+    oddCount: null,
+    carryOverNumber: null,
+  },
+): number[] | null {
+  const base = getCandidatePool(selectedOptions, recentDraws, inputs);
+  if (!base) return null;
+
+  const { pool, lastDraw } = base;
   const fixedNumbers: number[] = [];
+  const needLucky =
+    selectedOptions.has("include-lucky-number") &&
+    inputs.luckyNumber != null &&
+    inputs.luckyNumber >= 1 &&
+    inputs.luckyNumber <= 45 &&
+    pool.includes(inputs.luckyNumber);
+  const needSalary =
+    selectedOptions.has("salary-day-energy") &&
+    inputs.salaryDay != null &&
+    inputs.salaryDay >= 1 &&
+    inputs.salaryDay <= 31;
+  const salaryNumber = needSalary
+    ? Math.min(45, Math.max(1, Math.round((inputs.salaryDay! * 45) / 31)))
+    : null;
+  const needSalaryInPool =
+    needSalary && salaryNumber != null && pool.includes(salaryNumber);
+  const needResignDay =
+    selectedOptions.has("resign-date-hash") &&
+    inputs.resignDay != null &&
+    inputs.resignDay >= 1 &&
+    inputs.resignDay <= 31 &&
+    pool.includes(inputs.resignDay);
+
+  const needBossInclude =
+    selectedOptions.has("boss-name-exclusion") &&
+    inputs.bossName != null &&
+    inputs.bossName.trim().length > 0;
+  const bossNumber = needBossInclude
+    ? (() => {
+        let n = getStrokeCount(inputs.bossName!.trim());
+        while (n > 45) n -= 45;
+        if (n < 1) n = 1;
+        return n;
+      })()
+    : null;
+
+  const needCarryOption = selectedOptions.has("carry-over-one");
+  const hasManualCarry =
+    needCarryOption &&
+    inputs.carryOverNumber != null &&
+    pool.includes(inputs.carryOverNumber);
+
   if (needLucky) fixedNumbers.push(inputs.luckyNumber!);
   if (
     needSalaryInPool &&
@@ -230,8 +359,38 @@ export function generateLottoNumbers(
   )
     fixedNumbers.push(inputs.resignDay);
 
+  if (
+    needBossInclude &&
+    bossNumber != null &&
+    pool.includes(bossNumber) &&
+    !fixedNumbers.includes(bossNumber)
+  ) {
+    fixedNumbers.push(bossNumber);
+  }
+
+  if (hasManualCarry && !fixedNumbers.includes(inputs.carryOverNumber!)) {
+    fixedNumbers.push(inputs.carryOverNumber!);
+  }
+
+  const canAutoCarry =
+    needCarryOption &&
+    !hasManualCarry &&
+    lastDraw.length > 0 &&
+    lastDraw.some((n) => pool.includes(n));
+  const random = Math.random;
+
+  const needSumCondition = selectedOptions.has("sum-between-100-and-170");
+  const needOddCount =
+    selectedOptions.has("odd-even-balanced") &&
+    inputs.oddCount != null &&
+    inputs.oddCount >= 0 &&
+    inputs.oddCount <= 6;
+  const needNoSerial = selectedOptions.has("no-serial-numbers");
+  const needBalanced = selectedOptions.has("balanced-section");
+  const needNoDiagonal = selectedOptions.has("diagonal-pattern");
+
   const pick = (): number[] => {
-    if (needCarryOne && lastDraw.length > 0) {
+    if (canAutoCarry && lastDraw.length > 0) {
       return pick6WithCarryOne(pool, lastDraw, random);
     }
     if (fixedNumbers.length > 0) {

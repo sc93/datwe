@@ -20,7 +20,7 @@ const inputClass =
 
 export default function BossNameOption() {
   const id = "boss-name-exclusion" as const;
-  const label = "연인 이름 획수 포함";
+  const label = "이름 획수 포함";
   const checked = useLottoStore((s) => s.checked[id]);
   const bossName = useLottoStore((s) => s.bossName);
   const setChecked = useLottoStore((s) => s.setChecked);
@@ -61,7 +61,7 @@ export default function BossNameOption() {
               htmlFor="dialog-boss"
               className="text-muted-foreground text-sm"
             >
-              연인은 있으시죠? 없으면 본인 이름이라도..
+              지금 생각나는 사람은?
             </label>
             <input
               id="dialog-boss"

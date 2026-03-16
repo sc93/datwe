@@ -18,6 +18,7 @@ type LottoState = {
   bossName: string | null;
   salaryDay: number | null;
   oddCount: number | null;
+  carryOverNumber: number | null;
 };
 
 type LottoActions = {
@@ -27,6 +28,7 @@ type LottoActions = {
   setBossName: (value: string | null) => void;
   setSalaryDay: (value: number | null) => void;
   setOddCount: (value: number | null) => void;
+  setCarryOverNumber: (value: number | null) => void;
   setRecentDraws: (draws: number[][]) => void;
   generate: () => void;
   resetResult: () => void;
@@ -47,6 +49,7 @@ export const useLottoStore = create<LottoState & LottoActions>((set, get) => ({
   bossName: null,
   salaryDay: null,
   oddCount: null,
+  carryOverNumber: null,
 
   setChecked: (id, value) => {
     set((prev) => {
@@ -56,6 +59,7 @@ export const useLottoStore = create<LottoState & LottoActions>((set, get) => ({
       if (id === "boss-name-exclusion" && !value) clear.bossName = null;
       if (id === "salary-day-energy" && !value) clear.salaryDay = null;
       if (id === "odd-even-balanced" && !value) clear.oddCount = null;
+      if (id === "carry-over-one" && !value) clear.carryOverNumber = null;
       return {
         checked: { ...prev.checked, [id]: value },
         numbers: null,
@@ -69,10 +73,14 @@ export const useLottoStore = create<LottoState & LottoActions>((set, get) => ({
     set({ luckyNumber: value, numbers: null, error: null }),
   setResignDay: (value) =>
     set({ resignDay: value, numbers: null, error: null }),
-  setBossName: (value) => set({ bossName: value, numbers: null, error: null }),
+  setBossName: (value) =>
+    set({ bossName: value, numbers: null, error: null }),
   setSalaryDay: (value) =>
     set({ salaryDay: value, numbers: null, error: null }),
   setOddCount: (value) => set({ oddCount: value, numbers: null, error: null }),
+
+  setCarryOverNumber: (value) =>
+    set({ carryOverNumber: value, numbers: null, error: null }),
 
   resetResult: () => set({ numbers: null, error: null }),
 
@@ -87,6 +95,7 @@ export const useLottoStore = create<LottoState & LottoActions>((set, get) => ({
       bossName,
       salaryDay,
       oddCount,
+      carryOverNumber,
     } = get();
     const selected = new Set<LottoOptionId>(
       LOTTO_OPTION_IDS.filter((id) => checked[id]),
@@ -97,6 +106,7 @@ export const useLottoStore = create<LottoState & LottoActions>((set, get) => ({
       bossName,
       salaryDay,
       oddCount,
+      carryOverNumber,
     });
     if (result) {
       set({ numbers: result, error: null });
