@@ -3,6 +3,7 @@ import "./globals.css";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Noto_Sans_KR } from "next/font/google";
 import Image from "next/image";
+import Script from "next/script";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -40,6 +41,18 @@ export default function RootLayout({
           name="naver-site-verification"
           content="78620915d4073b38f73f28eb83c6722017bc62b9"
         />
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-X6S68TMWZJ"
+          strategy="afterInteractive"
+        />
+        <Script id="ga4" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-X6S68TMWZJ');
+          `}
+        </Script>
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${notoSansKr.variable} bg-gray-50 antialiased`}
