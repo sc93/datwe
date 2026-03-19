@@ -9,8 +9,8 @@ import Numbers from "./_components/numbers";
 import Option from "./_components/option";
 
 export const metadata: Metadata = {
-  title: "다퇴 | 다음 주엔 퇴사한다 - 로또 번호 만들기",
-  description: "내가 하고 싶은 조합으로 로또번호 만들기",
+  title: "다음주 퇴사 | 로또 번호 생성기",
+  description: "내가 하고 싶은 조합으로 로또번호 만들고 다음주에 퇴사한다",
   keywords: [
     "로또번호생성기",
     "퇴사",
@@ -22,10 +22,9 @@ export const metadata: Metadata = {
     "동행복권",
     "온라인 복권 구매",
   ],
-  authors: [{ name: "다퇴 팀" }],
   openGraph: {
-    title: "다퇴 | 다음 주엔 퇴사한다 - 로또 번호 만들기",
-    description: "내가 하고 싶은 조합으로 로또번호 만들기",
+    title: "다음주 퇴사 | 로또 번호 생성기",
+    description: "내가 하고 싶은 조합으로 로또번호 만들고 다음주에 퇴사한다",
     url: "https://datwe.vercel.app",
     siteName: "다퇴 (DATWE)",
 
@@ -34,8 +33,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "다퇴 | 다음 주엔 퇴사한다 - 로또 번호 만들기",
-    description: "내가 하고 싶은 조합으로 로또번호 만들기",
+    title: "다음주 퇴사 | 로또 번호 생성기",
+    description: "내가 하고 싶은 조합으로 로또번호 만들고 다음주에 퇴사한다",
   },
   icons: {
     icon: "/favicon.ico", // 'ㄷㅌ' 로고를 활용한 파비콘
