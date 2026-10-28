@@ -45,7 +45,9 @@ export default function CandidateNumbers() {
 
   return (
     <div className="mt-4 space-y-1">
-      <p className="text-xs text-zinc-500">현재 조건으로 선택 가능한 번호</p>
+      <p className="text-muted-foreground text-xs">
+        현재 조건으로 선택 가능한 번호
+      </p>
       <div className="flex flex-wrap gap-1">
         {Array.from({ length: 45 }, (_, i) => i + 1).map((n) => {
           const enabled = pool.includes(n);
@@ -55,8 +57,8 @@ export default function CandidateNumbers() {
               className={[
                 "inline-flex h-6 w-6 items-center justify-center rounded-full border text-xs",
                 enabled
-                  ? "border-zinc-900 bg-zinc-900 text-white"
-                  : "border-zinc-200 text-zinc-300",
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border text-muted-foreground",
               ].join(" ")}
             >
               {n}

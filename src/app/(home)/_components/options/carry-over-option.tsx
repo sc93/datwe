@@ -66,7 +66,7 @@ export default function CarryOverOption() {
                     key={n}
                     type="button"
                     variant={carryOverNumber === n ? "default" : "outline"}
-                    className="h-9 w-9 rounded-full p-0 text-sm"
+                    className="size-11 rounded-full p-0 text-sm"
                     onClick={() => handleSelect(n)}
                   >
                     {n}

@@ -118,6 +118,11 @@
     outline: 3px solid #5285b7;
     outline-offset: 4px;
   }
+  input:not([type="checkbox"]):not([type="radio"]),
+  select {
+    min-height: 44px;
+    font-size: 1rem;
+  }
   [data-slot="dialog-close"] {
     display: inline-flex;
     min-width: 44px;
@@ -135,5 +140,21 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .lotto-ball-enter {
+    animation: lotto-ball-enter 200ms ease-out both;
+  }
+  @keyframes lotto-ball-enter {
+    from {
+      opacity: 0.2;
+      transform: translateY(5px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 }

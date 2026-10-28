@@ -38,11 +38,17 @@ export default function OptionCheckbox({
       id={id}
       variant={checked ? "default" : "outline"}
       onClick={handleClick}
-      className="flex h-20 w-full flex-col gap-0.5 overflow-hidden py-5"
+      aria-pressed={checked}
+      aria-haspopup={opensDialog ? "dialog" : undefined}
+      className="flex h-auto min-h-20 w-full min-w-0 flex-col gap-1 rounded-xl px-2 py-3 text-[11px] min-[480px]:text-sm"
     >
-      <span className="whitespace-pre-line">{label}</span>
+      <span className="text-center leading-5 break-keep whitespace-normal">
+        {label}
+      </span>
       {valueLabel && (
-        <span className="line-clamp-1 text-xs opacity-90">{valueLabel}</span>
+        <span className="max-w-full text-center text-[10px] leading-4 whitespace-normal opacity-90">
+          {valueLabel}
+        </span>
       )}
     </Button>
   );
