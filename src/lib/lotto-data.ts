@@ -14,6 +14,18 @@ export type LottoData = {
 };
 
 export const RECENT_DRAW_COUNT = 5;
+export const DRAW_FRESHNESS_MS = 300_000;
+
+export function getLottoDataAtTime(
+  data: LottoData,
+  now = Date.now(),
+): LottoData {
+  if (data.status !== "fresh" && data.status !== "partial") return data;
+  const age = now - Date.parse(data.checkedAt ?? "");
+  return !Number.isFinite(age) || age < 0 || age >= DRAW_FRESHNESS_MS
+    ? { ...data, status: "stale" }
+    : data;
+}
 
 function record(value: unknown): Record<string, unknown> | null {
   return value !== null && typeof value === "object" && !Array.isArray(value)

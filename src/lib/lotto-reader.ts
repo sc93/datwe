@@ -1,10 +1,12 @@
 import {
+  DRAW_FRESHNESS_MS,
+  getLottoDataAtTime,
   type LottoData,
   parseDrawResponse,
   RECENT_DRAW_COUNT,
 } from "./lotto-data";
 
-export const CACHE_SECONDS = 300;
+export const CACHE_SECONDS = DRAW_FRESHNESS_MS / 1000;
 const REQUEST_TIMEOUT_MS = 5000;
 const ENDPOINT = "https://www.dhlottery.co.kr/lt645/selectPstLt645Info.do";
 
@@ -100,14 +102,7 @@ export async function readLottoData(
 ): Promise<LottoData> {
   try {
     const cached = await readCache();
-    const age = now() - Date.parse(cached.checkedAt ?? "");
-    return {
-      ...cached,
-      status:
-        !Number.isFinite(age) || age < 0 || age >= CACHE_SECONDS * 1000
-          ? "stale"
-          : cached.status,
-    };
+    return getLottoDataAtTime(cached, now());
   } catch (error) {
     return error instanceof IncompleteLottoDataError
       ? error.data

@@ -7,6 +7,8 @@ import { useLottoStore } from "../_store/lotto-store";
 
 export default function CandidateNumbers() {
   const checked = useLottoStore((s) => s.checked);
+  const canUseRecentFive = useLottoStore((s) => s.canUseRecentFive);
+  const canUseCarryOver = useLottoStore((s) => s.canUseCarryOver);
   const recentDraws = useLottoStore((s) => s.recentDraws);
   const luckyNumber = useLottoStore((s) => s.luckyNumber);
   const resignDay = useLottoStore((s) => s.resignDay);
@@ -41,7 +43,12 @@ export default function CandidateNumbers() {
     carryOverNumber,
   ]);
 
-  if (pool.length === 0) return null;
+  if (
+    pool.length === 0 ||
+    (checked["recent-5-times-not-appeared"] && !canUseRecentFive) ||
+    (checked["carry-over-one"] && !canUseCarryOver)
+  )
+    return null;
 
   return (
     <div className="mt-4 space-y-1">

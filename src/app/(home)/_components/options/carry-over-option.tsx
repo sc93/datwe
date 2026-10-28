@@ -19,6 +19,7 @@ export default function CarryOverOption() {
   const label = "이월수 1개 포함";
   const checked = useLottoStore((s) => s.checked[id]);
   const recentDraws = useLottoStore((s) => s.recentDraws);
+  const available = useLottoStore((s) => s.canUseCarryOver);
   const carryOverNumber = useLottoStore((s) => s.carryOverNumber);
   const setChecked = useLottoStore((s) => s.setChecked);
   const setCarryOverNumber = useLottoStore((s) => s.setCarryOverNumber);
@@ -36,6 +37,7 @@ export default function CarryOverOption() {
   return (
     <>
       <OptionCheckbox
+        disabled={!available && !checked}
         id={id}
         label={label}
         checked={checked}
@@ -43,7 +45,11 @@ export default function CarryOverOption() {
         opensDialog
         onOpenDialog={() => setOpen(true)}
         valueLabel={
-          carryOverNumber != null ? `직전 회차 번호 ${carryOverNumber}` : null
+          !available
+            ? "직전 회차 확인 필요"
+            : carryOverNumber != null
+              ? `직전 회차 번호 ${carryOverNumber}`
+              : null
         }
       />
       <Dialog open={open} onOpenChange={(o) => !o && setOpen(false)}>
