@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <title>DATWE · 디자인 미리보기</title>
+    <link rel="stylesheet" href="./preview.css" />
+    <script src="./preview.js" defer></script>
+  </head>
+  <body>
+    <aside class="preview-bar" aria-label="디자인 검토 도구">
+      <span
+        ><span class="preview-dot"></span> DESIGN PREVIEW
+        <span class="preview-version">/ 01</span></span
+      >
+      <label for="preview-state"
+        >화면 상태
+        <select id="preview-state">
+          <option value="default">첫 방문</option>
+          <option value="selected">조건 선택</option>
+          <option value="generated">생성 결과</option>
+          <option value="saved">저장한 번호</option>
+          <option value="conflict">조건 충돌</option>
+          <option value="failure">데이터 실패</option>
+        </select></label
+      >
+    </aside>
+    <div class="sheet">
+      <header class="brand-header">
+        <a class="brand" href="./index.html" aria-label="다음주 퇴사 메인"
+          >datwe<span class="brand-period">.</span></a
+        >
+        <span class="brand-caption">다음주 퇴사</span>
+      </header>
+      <main>
+        <section class="draw-section" aria-labelledby="draw-heading">
+          <div class="section-top">
+            <span class="eyebrow">WEEKLY RECORD</span
+            ><span class="sample-label">시안 · 모든 번호는 예시입니다</span>
+          </div>
+          <div class="draw-heading">
+            <h1 id="draw-heading">최근 당첨번호</h1>
+            <span class="draw-date">2026. 10. 24.</span>
+          </div>
+          <div id="draw-content">
+            <div class="round-line">
+              <span class="round-badge">제 0000회</span
+              ><span class="record-label">추첨 완료</span>
+            </div>
+            <div
+              class="draw-numbers"
+              aria-label="예시 당첨번호 3, 12, 19, 27, 34, 42. 보너스 8"
+            >
+              <div class="balls">
+                <span class="ball yellow">3</span
+                ><span class="ball blue">12</span
+                ><span class="ball blue">19</span
+                ><span class="ball red">27</span
+                ><span class="ball gray">34</span
+                ><span class="ball green">42</span>
+              </div>
+              <div class="bonus">
+                <span class="plus" aria-hidden="true">+</span
+                ><span class="ball yellow">8</span
+                ><span class="bonus-caption">보너스</span>
+              </div>
+            </div>
+            <details class="history">
+              <summary>
+                지난 회차 보기 <span aria-hidden="true">⌄</span>
+              </summary>
+              <div class="history-content" id="history-list"></div>
+            </details>
+          </div>
+          <div id="draw-failure" class="notice" hidden>
+            <strong>당첨번호를 불러오지 못했어요</strong>
+            <p>
+              잠시 후 다시 확인해 주세요.<br />조건 없이 번호를 만드는 건
+              가능해요.
+            </p>
+            <button class="text-button" id="retry-draw">다시 불러오기 ↻</button>
+          </div>
+        </section>
+        <section
+          class="conditions section-space"
+          aria-labelledby="conditions-heading"
+        >
+          <div class="section-title">
+            <div>
+              <span class="eyebrow">YOUR CHOICE</span>
+              <h2 id="conditions-heading">내 번호 조건</h2>
+            </div>
+            <button class="text-button muted" id="reset">초기화 ↺</button>
+          </div>
+          <p class="section-description">조건 없이 바로 생성해도 좋아요.</p>
+          <div class="personal-options">
+            <button
+              class="personal-option"
+              id="lucky-option"
+              aria-haspopup="dialog"
+            >
+              <span class="option-icon" aria-hidden="true">✳</span
+              ><span class="option-content"
+                ><strong>꼭 넣을 번호</strong
+                ><span id="lucky-description"
+                  >나만의 행운 번호가 있다면</span
+                ></span
+              ><span class="option-value" id="lucky-value"
+                >선택 <span aria-hidden="true">＋</span></span
+              >
+            </button>
+            <button
+              class="personal-option"
+              id="name-option"
+              aria-haspopup="dialog"
+            >
+              <span class="option-icon" aria-hidden="true">Aa</span
+              ><span class="option-content"
+                ><strong>이름으로 고른 번호</strong
+                ><span id="name-description"
+                  >이름의 획수로 만드는 작은 행운</span
+                ></span
+              ><span class="option-value" id="name-value"
+                >선택 <span aria-hidden="true">＋</span></span
+              >
+            </button>
+          </div>
+          <details class="advanced" id="advanced">
+            <summary>
+              <span
+                >조합 조건
+                <span class="count" id="condition-count">0</span></span
+              ><span class="summary-right"
+                >직접 고르기 <span aria-hidden="true">⌄</span></span
+              >
+            </summary>
+            <div class="advanced-content">
+              <label class="check-row"
+                ><span
+                  ><strong>최근 5회 당첨번호 제외</strong
+                  ><small>최근에 나온 본번호를 빼고 골라요</small></span
+                ><input type="checkbox" name="condition" value="recent"
+              /></label>
+              <label class="check-row"
+                ><span
+                  ><strong>직전 당첨번호에서 1개 포함</strong
+                  ><small>지난 회차 본번호 하나를 가져와요</small></span
+                ><input type="checkbox" name="condition" value="carry"
+              /></label>
+              <label class="check-row"
+                ><span
+                  ><strong>홀짝 개수 설정</strong
+                  ><small>홀수 3개 · 짝수 3개</small></span
+                ><input type="checkbox" name="condition" value="odd"
+              /></label>
+              <label class="check-row"
+                ><span
+                  ><strong>번호 합계 100~170</strong
+                  ><small>여섯 번호의 합계를 맞춰요</small></span
+                ><input type="checkbox" name="condition" value="sum"
+              /></label>
+              <label class="check-row"
+                ><span
+                  ><strong>3개 연속 번호 제외</strong
+                  ><small>세 개 이상 이어지는 번호는 빼요</small></span
+                ><input type="checkbox" name="condition" value="serial"
+              /></label>
+              <label class="check-row"
+                ><span
+                  ><strong>번호대 고르게 선택</strong
+                  ><small>다섯 번호대에서 각각 하나 이상</small></span
+                ><input type="checkbox" name="condition" value="balanced"
+              /></label>
+              <label class="check-row"
+                ><span
+                  ><strong>직선·대각선 마킹 제한</strong
+                  ><small>5열 × 9행에서 세 점의 직선 마킹 제외</small></span
+                ><input type="checkbox" name="condition" value="pattern"
+              /></label>
+            </div>
+          </details>
+          <div
+            class="selected-summary"
+            id="selected-summary"
+            aria-live="polite"
+            hidden
+          ></div>
+          <div class="conflict notice" id="conflict" role="alert" hidden>
+            <strong>두 조건을 함께 사용할 수 없어요</strong>
+            <p>
+              최근 번호를 제외하면 직전 당첨번호를 포함할 수 없어요. 둘 중 한
+              조건을 해제해 주세요.
+            </p>
+          </div>
+        </section>
+        <section
+          class="result-section section-space"
+          aria-labelledby="result-heading"
+        >
+          <div class="section-title">
+            <div>
+              <span class="eyebrow">A LITTLE POSSIBILITY</span>
+              <h2 id="result-heading">이번 주 나의 번호</h2>
+            </div>
+            <span class="small-label">LOTTO 6/45</span>
+          </div>
+          <div class="ticket" id="result-ticket" aria-live="polite">
+            <div class="ticket-top">
+              <span>DATWE NUMBER TICKET</span><span id="ticket-id">NO. —</span>
+            </div>
+            <div id="empty-result" class="empty-result">
+              <span class="empty-mark" aria-hidden="true">✳</span
+              ><strong>아직 비어 있는 이번 주의 가능성</strong>
+              <p>아래 버튼을 눌러 번호를 만들어 보세요.</p>
+            </div>
+            <div id="generated-result" class="generated-result" hidden>
+              <div class="result-meta">
+                <span>나만의 조합</span><span>예시 결과</span>
+              </div>
+              <div class="balls result-balls" id="result-balls"></div>
+              <p class="result-conditions" id="result-conditions"></p>
+            </div>
+            <div class="ticket-bottom">
+              <span id="ticket-caption">당신의 다음 주를 응원해요.</span>
+              <div class="ticket-actions" id="ticket-actions" hidden>
+                <button id="copy-result" class="text-button">번호 복사</button
+                ><button id="save-result" class="save-button">
+                  ＋ 번호 저장
+                </button>
+              </div>
+              <span class="ticket-stamp" id="ticket-stamp" aria-hidden="true"
+                >GOOD<br />LUCK</span
+              >
+            </div>
+          </div>
+          <p id="action-feedback" class="feedback" role="status"></p>
+        </section>
+        <section
+          class="saved-section section-space"
+          aria-labelledby="saved-heading"
+        >
+          <div class="section-title">
+            <h2 id="saved-heading">
+              저장한 번호 <span class="saved-count" id="saved-count">0</span>
+            </h2>
+            <span class="small-label">최대 10개</span>
+          </div>
+          <div id="saved-list">
+            <div class="empty-saved">마음에 드는 번호를 여기에 모아두세요.</div>
+          </div>
+          <p class="storage-note">
+            이 브라우저에만 저장돼요.
+            <span class="preview-only"
+              >시안에서는 새로고침하면 초기화돼요.</span
+            >
+          </p>
+        </section>
+        <footer>
+          <span class="footer-brand">datwe.</span>
+          <p>번호 조건은 조합에만 반영되며<br />당첨을 보장하지 않아요.</p>
+          <a href="mailto:devssc93@gmail.com">문의하기 ↗</a>
+        </footer>
+      </main>
+      <div class="bottom-bar">
+        <div class="button-meta">
+          <span id="button-condition-count">선택한 조건 없음</span
+          ><span>6개의 작은 기대</span>
+        </div>
+        <button class="generate-button" id="generate">
+          <span aria-hidden="true">✳</span> 번호 생성하기
+          <span aria-hidden="true">↗</span>
+        </button>
+      </div>
+    </div>
+    <dialog id="number-dialog" aria-labelledby="dialog-title">
+      <form id="number-form">
+        <div class="dialog-header">
+          <h2 id="dialog-title">꼭 넣을 번호</h2>
+          <button
+            type="button"
+            id="close-dialog"
+            class="close-button"
+            aria-label="설정 닫기"
+          >
+            ×
+          </button>
+        </div>
+        <p id="dialog-description">생성할 조합에 포함할 번호를 골라주세요.</p>
+        <label for="personal-input" id="input-label">행운 번호 (1~45)</label
+        ><input id="personal-input" type="number" min="1" max="45" required />
+        <p id="dialog-note" class="dialog-note">
+          입력한 번호 한 개를 포함해요.
+        </p>
+        <div class="dialog-actions">
+          <button type="button" id="clear-personal" class="secondary-button">
+            선택 해제</button
+          ><button type="submit" class="primary-button">적용하기</button>
+        </div>
+      </form>
+    </dialog>
+  </body>
+</html>
