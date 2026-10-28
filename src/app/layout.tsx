@@ -2,7 +2,7 @@ import "./globals.css";
 
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Noto_Sans_KR } from "next/font/google";
-import Image from "next/image";
+import Link from "next/link";
 import Script from "next/script";
 
 const geistSans = Geist({
@@ -31,7 +31,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="ko">
       <head>
         <meta
           name="google-site-verification"
@@ -55,25 +55,39 @@ export default function RootLayout({
         </Script>
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${notoSansKr.variable} bg-gray-50 antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${notoSansKr.variable} antialiased`}
       >
-        <header className="sticky top-0 right-0 left-0 z-50 mx-auto h-15 max-w-150 bg-white py-2">
-          <Image
-            src="/logo.svg"
-            alt="Datwe"
-            width={100}
-            height={44}
-            className="mx-auto"
-          />
-        </header>
-
-        <main className="mx-auto max-w-150 bg-white">{children}</main>
-        <footer className="bg-background mx-auto max-w-150 py-10">
-          <p className="text-center text-sm text-gray-500">
-            조건 추가 문의 :{" "}
-            <a href="mailto:devssc93@gmail.com">devssc93@gmail.com</a>
-          </p>
-        </footer>
+        <div className="border-border/60 bg-background mx-auto min-h-dvh w-full max-w-150 border-x min-[900px]:my-7">
+          <header className="border-foreground mx-5 flex h-[78px] items-center justify-between border-b-2 min-[480px]:mx-6 min-[900px]:h-24">
+            <Link
+              href="/"
+              aria-label="다음주 퇴사 메인"
+              className="inline-flex min-h-11 items-center text-[34px] leading-none font-extrabold tracking-[-2px]"
+            >
+              datwe<span className="text-primary">.</span>
+            </Link>
+            <span className="text-xs font-semibold tracking-wide">
+              다음주 퇴사
+            </span>
+          </header>
+          <main className="px-5 pt-7 min-[480px]:px-6">{children}</main>
+          <footer className="text-muted-foreground mx-5 mt-10 flex flex-col items-center border-t pt-9 pb-[calc(10rem+env(safe-area-inset-bottom))] text-center min-[480px]:mx-6">
+            <span className="text-xl font-extrabold tracking-tight">
+              datwe.
+            </span>
+            <p className="mt-3 text-xs leading-6">
+              번호 조건은 조합에만 반영되며
+              <br />
+              당첨을 보장하지 않아요.
+            </p>
+            <a
+              className="mt-2 inline-flex min-h-11 items-center text-xs"
+              href="mailto:devssc93@gmail.com"
+            >
+              문의하기 ↗
+            </a>
+          </footer>
+        </div>
       </body>
     </html>
   );
