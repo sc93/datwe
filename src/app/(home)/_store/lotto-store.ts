@@ -3,6 +3,12 @@
 import { create } from "zustand";
 
 import {
+  getDrawAvailability,
+  getLottoDataAtTime,
+  type LottoData,
+} from "@/lib/lotto-data";
+
+import {
   generateLottoNumbers,
   LOTTO_OPTION_IDS,
   type LottoOptionId,
@@ -13,6 +19,9 @@ type LottoState = {
   numbers: number[] | null;
   error: string | null;
   recentDraws: number[][];
+  drawData: LottoData | null;
+  canUseRecentFive: boolean;
+  canUseCarryOver: boolean;
   luckyNumber: number | null;
   resignDay: number | null; // 1-31
   bossName: string | null;
@@ -29,7 +38,7 @@ type LottoActions = {
   setSalaryDay: (value: number | null) => void;
   setOddCount: (value: number | null) => void;
   setCarryOverNumber: (value: number | null) => void;
-  setRecentDraws: (draws: number[][]) => void;
+  setDrawData: (data: LottoData) => void;
   generate: () => void;
   resetResult: () => void;
 };
@@ -44,6 +53,9 @@ export const useLottoStore = create<LottoState & LottoActions>((set, get) => ({
   numbers: null,
   error: null,
   recentDraws: [],
+  drawData: null,
+  canUseRecentFive: false,
+  canUseCarryOver: false,
   luckyNumber: null,
   resignDay: null,
   bossName: null,
@@ -52,6 +64,20 @@ export const useLottoStore = create<LottoState & LottoActions>((set, get) => ({
   carryOverNumber: null,
 
   setChecked: (id, value) => {
+    const data = get().drawData;
+    if (data) get().setDrawData(data);
+    const { canUseRecentFive, canUseCarryOver } = get();
+    if (value && id === "recent-5-times-not-appeared" && !canUseRecentFive) {
+      set({
+        numbers: null,
+        error: "최근 5회 기록이 모두 확인된 뒤 선택할 수 있어요.",
+      });
+      return;
+    }
+    if (value && id === "carry-over-one" && !canUseCarryOver) {
+      set({ numbers: null, error: "직전 회차를 확인한 뒤 선택할 수 있어요." });
+      return;
+    }
     set((prev) => {
       const clear: Partial<LottoState> = {};
       if (id === "include-lucky-number" && !value) clear.luckyNumber = null;
@@ -73,8 +99,7 @@ export const useLottoStore = create<LottoState & LottoActions>((set, get) => ({
     set({ luckyNumber: value, numbers: null, error: null }),
   setResignDay: (value) =>
     set({ resignDay: value, numbers: null, error: null }),
-  setBossName: (value) =>
-    set({ bossName: value, numbers: null, error: null }),
+  setBossName: (value) => set({ bossName: value, numbers: null, error: null }),
   setSalaryDay: (value) =>
     set({ salaryDay: value, numbers: null, error: null }),
   setOddCount: (value) => set({ oddCount: value, numbers: null, error: null }),
@@ -84,9 +109,58 @@ export const useLottoStore = create<LottoState & LottoActions>((set, get) => ({
 
   resetResult: () => set({ numbers: null, error: null }),
 
-  setRecentDraws: (draws) => set({ recentDraws: draws }),
+  setDrawData: (incoming) => {
+    const data = getLottoDataAtTime(incoming);
+    const available = getDrawAvailability(data);
+    set({
+      drawData: data,
+      // 생성기는 기존처럼 마지막 배열을 직전 회차로 사용한다.
+      // 공유/API 모델은 최신순을 유지하고 이 경계에서만 변환한다.
+      recentDraws: [...data.draws]
+        .sort((a, b) => a.episode - b.episode)
+        .map((draw) => draw.numbers),
+      canUseRecentFive: available.recentFive,
+      canUseCarryOver: available.carryOver,
+    });
+  },
 
   generate: () => {
+    const data = get().drawData;
+    if (data) get().setDrawData(data);
+    const state = get();
+    if (
+      state.checked["recent-5-times-not-appeared"] &&
+      !state.canUseRecentFive
+    ) {
+      set({
+        numbers: null,
+        error:
+          "최근 5회 기록을 확인하지 못했어요. 조건을 해제하거나 새로고침해 주세요.",
+      });
+      return;
+    }
+    if (state.checked["carry-over-one"] && !state.canUseCarryOver) {
+      set({
+        numbers: null,
+        error:
+          "직전 회차를 확인하지 못했어요. 조건을 해제하거나 새로고침해 주세요.",
+      });
+      return;
+    }
+    const latestDraw = state.drawData?.draws.find(
+      (draw) => draw.episode === state.drawData?.latestEpisode,
+    );
+    if (
+      state.checked["carry-over-one"] &&
+      state.carryOverNumber !== null &&
+      !latestDraw?.numbers.includes(state.carryOverNumber)
+    ) {
+      set({
+        numbers: null,
+        error: "직전 회차가 변경됐어요. 이월수를 해제한 뒤 다시 선택해 주세요.",
+      });
+      return;
+    }
     const {
       checked,
       recentDraws,

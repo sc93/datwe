@@ -10,6 +10,7 @@ export default function OptionCheckbox({
   opensDialog,
   onOpenDialog,
   valueLabel,
+  disabled,
 }: {
   id: string;
   label: string;
@@ -20,6 +21,7 @@ export default function OptionCheckbox({
   onOpenDialog?: () => void;
   /** 모달에서 입력한 값 (체크된 경우에만 표시) */
   valueLabel?: string | null;
+  disabled?: boolean;
 }) {
   const handleClick = () => {
     if (opensDialog && onOpenDialog) {
@@ -38,6 +40,7 @@ export default function OptionCheckbox({
       id={id}
       variant={checked ? "default" : "outline"}
       onClick={handleClick}
+      disabled={disabled}
       aria-pressed={checked}
       aria-haspopup={opensDialog ? "dialog" : undefined}
       className="flex h-auto min-h-20 w-full min-w-0 flex-col gap-1 rounded-xl px-2 py-3 text-[11px] min-[480px]:text-sm"

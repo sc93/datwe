@@ -2,6 +2,7 @@ import { Metadata } from "next";
 
 import { fetchRecentDraws } from "@/lib/lotto-dhlottery";
 
+import DrawDataStatus from "./_components/draw-data-status";
 import GenBtn from "./_components/gen-btn";
 import LottoDrawsProvider from "./_components/lotto-draws-provider";
 import Numbers from "./_components/numbers";
@@ -42,21 +43,11 @@ export const metadata: Metadata = {
 
 export default async function Home() {
   const result = await fetchRecentDraws();
-  const recentDraws = result?.draws ?? [];
 
   return (
-    <LottoDrawsProvider recentDraws={recentDraws}>
+    <LottoDrawsProvider data={result}>
       <div className="space-y-8">
-        <div className="text-muted-foreground flex min-h-11 flex-wrap items-center justify-between gap-2 border-b pb-4 text-xs">
-          <span className="text-primary font-mono text-[10px] tracking-[0.15em]">
-            WEEKLY RECORD
-          </span>
-          <p>
-            {result?.latestEpisode
-              ? `최근 추첨 제 ${result.latestEpisode}회`
-              : "최근 회차를 확인하지 못했어요"}
-          </p>
-        </div>
+        <DrawDataStatus initialData={result} />
         <Option />
         <Numbers />
       </div>
