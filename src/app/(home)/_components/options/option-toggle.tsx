@@ -1,7 +1,7 @@
 "use client";
 
-import { getStrokeCount } from "../../_lib/stroke-count";
 import { type LottoOptionId } from "../../_lib/lotto-conditions";
+import { getStrokeCount } from "../../_lib/stroke-count";
 import { useLottoStore } from "../../_store/lotto-store";
 import OptionCheckbox from "../option-checkbox";
 

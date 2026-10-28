@@ -16,7 +16,16 @@ import SumBetweenOption from "./options/sum-between-option";
 export default function Option() {
   return (
     <section className="space-y-3">
-      <div className="grid grid-cols-3 gap-3">
+      <div>
+        <span className="text-primary font-mono text-[10px] tracking-[0.15em]">
+          YOUR CHOICE
+        </span>
+        <h2 className="mt-1 text-xl font-bold tracking-tight">내 번호 조건</h2>
+        <p className="text-muted-foreground mt-2 text-xs">
+          조건 없이 바로 생성해도 좋아요.
+        </p>
+      </div>
+      <div className="grid grid-cols-3 gap-2 min-[480px]:gap-3">
         <RecentFiveOption />
         <SumBetweenOption />
         <IncludeLuckyNumberOption />

@@ -1,4 +1,3 @@
-// app/layout.tsx 또는 app/page.tsx
 import { Metadata } from "next";
 
 import { fetchRecentDraws } from "@/lib/lotto-dhlottery";
@@ -47,18 +46,22 @@ export default async function Home() {
 
   return (
     <LottoDrawsProvider recentDraws={recentDraws}>
-      <div className="min-h-[calc(100vh-140px)] max-w-150 bg-white px-4 pt-5 pb-24">
-        <p className="text-right text-base font-semibold text-zinc-500">
-          최근 회차: {result?.latestEpisode}
-        </p>
-        <div className="h-2.5" />
+      <div className="space-y-8">
+        <div className="text-muted-foreground flex min-h-11 flex-wrap items-center justify-between gap-2 border-b pb-4 text-xs">
+          <span className="text-primary font-mono text-[10px] tracking-[0.15em]">
+            WEEKLY RECORD
+          </span>
+          <p>
+            {result?.latestEpisode
+              ? `최근 추첨 제 ${result.latestEpisode}회`
+              : "최근 회차를 확인하지 못했어요"}
+          </p>
+        </div>
         <Option />
         <Numbers />
       </div>
 
-      <div className="sticky right-0 bottom-0 left-0 z-50 mx-auto h-20 max-w-150 border-t border-zinc-200 bg-white px-4 py-3">
-        <GenBtn />
-      </div>
+      <GenBtn />
     </LottoDrawsProvider>
   );
 }
