@@ -1,12 +1,14 @@
 import { Metadata } from "next";
+import { Suspense } from "react";
 
 import { fetchRecentDraws } from "@/lib/lotto-dhlottery";
 
-import DrawDataStatus from "./_components/draw-data-status";
 import GenBtn from "./_components/gen-btn";
 import LottoDrawsProvider from "./_components/lotto-draws-provider";
 import Numbers from "./_components/numbers";
 import Option from "./_components/option";
+import RecentDraws from "./_components/recent-draws";
+import { RecentDrawsLoading } from "./_components/recent-draws-view";
 
 export const metadata: Metadata = {
   title: "다음주 퇴사 | 로또 번호 생성기",
@@ -41,18 +43,26 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function Home() {
+async function DrawsSection() {
   const result = await fetchRecentDraws();
-
   return (
     <LottoDrawsProvider data={result}>
+      <RecentDraws initialData={result} />
+    </LottoDrawsProvider>
+  );
+}
+
+export default function Home() {
+  return (
+    <>
       <div className="space-y-8">
-        <DrawDataStatus initialData={result} />
+        <Suspense fallback={<RecentDrawsLoading />}>
+          <DrawsSection />
+        </Suspense>
         <Option />
         <Numbers />
       </div>
-
       <GenBtn />
-    </LottoDrawsProvider>
+    </>
   );
 }
