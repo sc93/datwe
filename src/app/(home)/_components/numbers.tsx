@@ -105,7 +105,7 @@ export default function Numbers() {
   }, []);
 
   return (
-    <section className="mt-8 space-y-3">
+    <section id="lotto-result" className="mt-8 scroll-mt-6 space-y-3">
       <div>
         <span className="text-primary font-mono text-[10px] tracking-[0.15em]">
           A LITTLE POSSIBILITY
