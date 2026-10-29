@@ -9,7 +9,8 @@ import {
 } from "@/lib/lotto-data";
 
 import {
-  generateLottoNumbers,
+  EMPTY_INPUTS,
+  generateLottoResult,
   LOTTO_OPTION_IDS,
   type LottoOptionId,
 } from "../_lib/lotto-conditions";
@@ -41,6 +42,7 @@ type LottoActions = {
   setDrawData: (data: LottoData) => void;
   generate: () => void;
   resetResult: () => void;
+  resetOptions: () => void;
 };
 
 const initialChecked = LOTTO_OPTION_IDS.reduce(
@@ -66,6 +68,20 @@ export const useLottoStore = create<LottoState & LottoActions>((set, get) => ({
   setChecked: (id, value) => {
     const data = get().drawData;
     if (data) get().setDrawData(data);
+    const other =
+      id === "carry-over-one"
+        ? "recent-5-times-not-appeared"
+        : id === "recent-5-times-not-appeared"
+          ? "carry-over-one"
+          : null;
+    if (value && other && get().checked[other]) {
+      set({
+        numbers: null,
+        error:
+          "최근 5회 제외와 직전 본번호 1개 포함은 함께 선택할 수 없어요. 먼저 다른 조건을 해제해 주세요.",
+      });
+      return;
+    }
     const { canUseRecentFive, canUseCarryOver } = get();
     if (value && id === "recent-5-times-not-appeared" && !canUseRecentFive) {
       set({
@@ -108,6 +124,13 @@ export const useLottoStore = create<LottoState & LottoActions>((set, get) => ({
     set({ carryOverNumber: value, numbers: null, error: null }),
 
   resetResult: () => set({ numbers: null, error: null }),
+  resetOptions: () =>
+    set({
+      checked: { ...initialChecked },
+      ...EMPTY_INPUTS,
+      numbers: null,
+      error: null,
+    }),
 
   setDrawData: (incoming) => {
     const data = getLottoDataAtTime(incoming);
@@ -174,7 +197,7 @@ export const useLottoStore = create<LottoState & LottoActions>((set, get) => ({
     const selected = new Set<LottoOptionId>(
       LOTTO_OPTION_IDS.filter((id) => checked[id]),
     );
-    const result = generateLottoNumbers(selected, recentDraws, {
+    const result = generateLottoResult(selected, recentDraws, {
       luckyNumber,
       resignDay,
       bossName,
@@ -182,14 +205,14 @@ export const useLottoStore = create<LottoState & LottoActions>((set, get) => ({
       oddCount,
       carryOverNumber,
     });
-    if (result) {
-      set({ numbers: result, error: null });
+    if (result.status === "success") {
+      set({ numbers: result.numbers, error: null });
       return;
     }
 
     set({
       numbers: null,
-      error: "조건을 만족하는 번호를 찾지 못했어요. 다시 시도해 주세요.",
+      error: result.message,
     });
   },
 }));

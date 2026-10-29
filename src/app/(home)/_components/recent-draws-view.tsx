@@ -10,6 +10,12 @@ function dateLabel(date: string) {
   return `${date.replaceAll("-", ". ")}.`;
 }
 
+/** 한국 표준시 숫자 형식을 고정해 서버·브라우저 ICU 차이를 없앤다. */
+function checkedAtLabel(value: string) {
+  const seoul = new Date(Date.parse(value) + 9 * 60 * 60 * 1000).toISOString();
+  return `${seoul.slice(0, 10).replaceAll("-", ". ")}. ${seoul.slice(11, 16)}`;
+}
+
 function DrawNumbers({
   draw,
   compact = false,
@@ -75,7 +81,7 @@ export function RecentDrawsView({
     data.status === "fresh"
       ? "추첨 완료"
       : data.status === "stale"
-        ? "저장된 기록"
+        ? null
         : "일부 기록 누락";
   return (
     <section aria-labelledby="recent-draws-heading" aria-busy={isRefreshing}>
@@ -104,12 +110,16 @@ export function RecentDrawsView({
             <span className="bg-secondary text-primary rounded px-2.5 py-1 text-xs font-semibold">
               제 {latest.episode}회
             </span>
-            <span className="text-muted-foreground text-xs">{statusLabel}</span>
+            {statusLabel && (
+              <span className="text-muted-foreground text-xs">
+                {statusLabel}
+              </span>
+            )}
           </div>
           <DrawNumbers draw={latest} />
         </div>
       )}
-      {data.status !== "fresh" && (
+      {(data.status === "partial" || data.status === "unavailable") && (
         <div
           role="status"
           className="bg-muted mt-4 rounded-xl border p-4 text-xs leading-6"
@@ -117,25 +127,16 @@ export function RecentDrawsView({
           <strong className="block text-sm font-semibold">
             {data.status === "unavailable"
               ? "당첨번호를 불러오지 못했어요"
-              : data.status === "stale"
-                ? "갱신이 지연되고 있어요"
-                : "일부 회차를 확인하지 못했어요"}
+              : "일부 회차를 확인하지 못했어요"}
           </strong>
           <p className="text-muted-foreground mt-1">
             {data.status === "unavailable"
               ? "잠시 후 다시 확인해 주세요. 일반 번호 생성은 사용할 수 있어요."
-              : data.status === "stale"
-                ? "마지막으로 확인한 기록을 보여드려요. 최신 조건을 사용하려면 새로고침해 주세요."
-                : "확인된 회차만 표시해요. 최근 5회 제외는 기록이 모두 확인된 뒤 사용할 수 있어요."}
+              : "확인된 회차만 표시해요. 최근 5회 제외는 기록이 모두 확인된 뒤 사용할 수 있어요."}
           </p>
           {data.checkedAt && (
             <p className="text-muted-foreground mt-2 text-[11px]">
-              마지막 확인:{" "}
-              {new Intl.DateTimeFormat("ko-KR", {
-                timeZone: "Asia/Seoul",
-                dateStyle: "short",
-                timeStyle: "short",
-              }).format(new Date(data.checkedAt))}
+              마지막 확인: {checkedAtLabel(data.checkedAt)}
             </p>
           )}
         </div>

@@ -44,7 +44,9 @@ export default function OddEvenOption() {
         onCheckedChange={(v) => setChecked(id, v)}
         opensDialog
         onOpenDialog={() => setOpen(true)}
-        valueLabel={oddCount != null ? `홀수 ${oddCount}개` : null}
+        valueLabel={
+          oddCount != null ? `홀 ${oddCount} · 짝 ${6 - oddCount}` : null
+        }
       />
       <Dialog open={open} onOpenChange={(o) => !o && setOpen(false)}>
         <DialogContent>
@@ -77,6 +79,11 @@ export default function OddEvenOption() {
               className={inputClass}
             />
           </div>
+          {oddCount !== null && (
+            <p className="text-sm">
+              홀수 {oddCount}개 + 짝수 {6 - oddCount}개 = 6개
+            </p>
+          )}
           <DialogFooter>
             <Button variant="ghost" onClick={() => setOpen(false)}>
               취소

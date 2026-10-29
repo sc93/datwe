@@ -20,7 +20,19 @@ export default function GenBtn() {
       <Button
         size="lg"
         className="relative h-14 w-full rounded-xl text-base font-semibold"
-        onClick={generate}
+        onClick={() => {
+          generate();
+          if (!useLottoStore.getState().numbers) return;
+          requestAnimationFrame(() => {
+            document.getElementById("lotto-result")?.scrollIntoView({
+              behavior: window.matchMedia("(prefers-reduced-motion: reduce)")
+                .matches
+                ? "instant"
+                : "smooth",
+              block: "start",
+            });
+          });
+        }}
       >
         <Asterisk aria-hidden="true" className="size-5" />
         번호 생성하기

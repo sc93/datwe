@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-import { getStrokeCount } from "../../_lib/stroke-count";
+import { getNameNumber } from "../../_lib/lotto-conditions";
 import { useLottoStore } from "../../_store/lotto-store";
 import OptionCheckbox from "../option-checkbox";
 
@@ -46,9 +46,7 @@ export default function BossNameOption() {
         opensDialog
         onOpenDialog={() => setOpen(true)}
         valueLabel={
-          bossName?.trim()
-            ? `${bossName} (${getStrokeCount(bossName.trim())}획)`
-            : null
+          bossName?.trim() ? `포함 번호 ${getNameNumber(bossName)}` : null
         }
       />
       <Dialog open={open} onOpenChange={(o) => !o && setOpen(false)}>
@@ -72,6 +70,11 @@ export default function BossNameOption() {
               className={inputClass}
             />
           </div>
+          {bossName?.trim() && (
+            <p className="text-sm">
+              포함할 번호: {getNameNumber(bossName)} (획수를 1~45로 변환)
+            </p>
+          )}
           <DialogFooter>
             <Button variant="ghost" onClick={() => setOpen(false)}>
               취소

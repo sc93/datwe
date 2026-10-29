@@ -27,11 +27,11 @@ test("메인에 최신 회차의 날짜·본번호6개·보너스를 구분하�
   assert.ok(html.indexOf("제 1247회") < html.indexOf("제 1246회"));
   assert.match(html, /https:\/\/www\.dhlottery\.co\.kr\/lt645\/result/);
 });
-test("갱신 지연 상태는 최신 확인 대신 저장된 기록과 마지막 확인 시각을 표시한다", () => {
+test("갱신 지연 문구 없이 회차와 당첨번호를 유지한다", () => {
   const html = render({ ...completeData(), status: "stale" });
-  assert.match(html, /저장된 기록/);
-  assert.match(html, /갱신이 지연/);
-  assert.match(html, /마지막 확인/);
+  assert.doesNotMatch(html, /저장된 기록/);
+  assert.doesNotMatch(html, /갱신이 지연/);
+  assert.doesNotMatch(html, /마지막 확인/);
   assert.doesNotMatch(html, /최신 확인 완료/);
   assert.match(html, /제 1247회/);
 });
@@ -72,4 +72,14 @@ test("첫 로딩과 재시도 중 상태를 알리고 새로고침 중 기존 �
   assert.match(refreshing, /불러오는 중/);
   assert.match(refreshing, /disabled/);
   assert.match(refreshing, /제 1247회/);
+});
+
+test("부분 실패의 확인 시각은 서버·브라우저 로케일에 무관한 숫자 형식이다", () => {
+  const html = render({
+    ...completeData(),
+    status: "partial",
+    checkedAt: "2026-10-28T00:00:00.000Z",
+  });
+  assert.match(html, /2026\. 10\. 28\. 09:00/);
+  assert.doesNotMatch(html, /AM|PM|오전|오후/);
 });

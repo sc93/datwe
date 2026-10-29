@@ -81,6 +81,18 @@ export default function CarryOverOption() {
               </div>
             </>
           )}
+          {available && (
+            <Button
+              variant="outline"
+              onClick={() => {
+                setCarryOverNumber(null);
+                setChecked(id, true);
+                setOpen(false);
+              }}
+            >
+              직전 본번호에서 자동으로 1개 선택
+            </Button>
+          )}
           <DialogFooter>
             <Button
               variant="ghost"
