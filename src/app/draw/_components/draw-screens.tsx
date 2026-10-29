@@ -412,26 +412,6 @@ export function DrawDetailScreen({
               <span className="sr-only">(새 탭)</span>
             </a>
           </div>
-          <nav aria-label="인접 회차 이동" className="my-5 flex gap-2">
-            {episode > 1 ? (
-              <Button asChild variant="outline" className="flex-1">
-                <Link href={drawHref(episode - 1, to)}>← {episode - 1}회</Link>
-              </Button>
-            ) : (
-              <Button variant="outline" className="flex-1" disabled>
-                이전 회차
-              </Button>
-            )}
-            {latest !== null && episode < latest ? (
-              <Button asChild variant="outline" className="flex-1">
-                <Link href={drawHref(episode + 1, to)}>{episode + 1}회 →</Link>
-              </Button>
-            ) : (
-              <Button variant="outline" className="flex-1" disabled>
-                다음 회차
-              </Button>
-            )}
-          </nav>
           <HistoryAnalysis key={episode} draw={target.draw} />
         </>
       ) : (
