@@ -27,9 +27,9 @@ test("메인에 최신 회차의 날짜·본번호6개·보너스를 구분하�
   assert.ok(html.indexOf("제 1247회") < html.indexOf("제 1246회"));
   assert.match(html, /https:\/\/www\.dhlottery\.co\.kr\/lt645\/result/);
 });
-test("갱신 지연 상세 안내는 숨기고 저장된 기록 표시를 유지한다", () => {
+test("갱신 지연 문구 없이 회차와 당첨번호를 유지한다", () => {
   const html = render({ ...completeData(), status: "stale" });
-  assert.match(html, /저장된 기록/);
+  assert.doesNotMatch(html, /저장된 기록/);
   assert.doesNotMatch(html, /갱신이 지연/);
   assert.doesNotMatch(html, /마지막 확인/);
   assert.doesNotMatch(html, /최신 확인 완료/);

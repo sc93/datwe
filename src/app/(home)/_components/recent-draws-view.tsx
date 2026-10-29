@@ -81,7 +81,7 @@ export function RecentDrawsView({
     data.status === "fresh"
       ? "추첨 완료"
       : data.status === "stale"
-        ? "저장된 기록"
+        ? null
         : "일부 기록 누락";
   return (
     <section aria-labelledby="recent-draws-heading" aria-busy={isRefreshing}>
@@ -110,7 +110,11 @@ export function RecentDrawsView({
             <span className="bg-secondary text-primary rounded px-2.5 py-1 text-xs font-semibold">
               제 {latest.episode}회
             </span>
-            <span className="text-muted-foreground text-xs">{statusLabel}</span>
+            {statusLabel && (
+              <span className="text-muted-foreground text-xs">
+                {statusLabel}
+              </span>
+            )}
           </div>
           <DrawNumbers draw={latest} />
         </div>
