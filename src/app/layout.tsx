@@ -3,7 +3,8 @@ import "./globals.css";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Noto_Sans_KR } from "next/font/google";
 import Link from "next/link";
-import Script from "next/script";
+
+import { Analytics } from "@/components/analytics";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -57,30 +58,6 @@ export default function RootLayout({
           name="naver-site-verification"
           content="78620915d4073b38f73f28eb83c6722017bc62b9"
         />
-        {process.env.NODE_ENV === "production" && (
-          <>
-            <Script
-              src="https://www.googletagmanager.com/gtag/js?id=G-X6S68TMWZJ"
-              strategy="afterInteractive"
-            />
-            <Script id="ga4" strategy="afterInteractive">
-              {`
-            if (window.location.origin === "https://datwe.vercel.app") {
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-            gtag('config', 'G-X6S68TMWZJ', {
-              page_title: '다음주 퇴사 | 로또 번호 생성기',
-              page_location: 'https://datwe.vercel.app/',
-              page_referrer: '',
-              allow_google_signals: false,
-              allow_ad_personalization_signals: false
-            });
-            }
-          `}
-            </Script>
-          </>
-        )}
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${notoSansKr.variable} antialiased`}
@@ -98,6 +75,7 @@ export default function RootLayout({
               다음주 퇴사
             </span>
           </header>
+          <Analytics />
           <main className="px-5 pt-7 min-[480px]:px-6">{children}</main>
           <footer className="text-muted-foreground mx-5 mt-10 flex flex-col items-center border-t pt-9 pb-[calc(10rem+env(safe-area-inset-bottom))] text-center min-[480px]:mx-6">
             <span className="text-xl font-extrabold tracking-tight">

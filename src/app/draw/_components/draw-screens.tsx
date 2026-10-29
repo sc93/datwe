@@ -5,12 +5,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 
+import { trackLottoEvent } from "@/app/(home)/_lib/analytics";
 import { DrawNumbers } from "@/components/draw-numbers";
 import { Button } from "@/components/ui/button";
 import type { DrawDetailData } from "@/lib/draw-detail";
 import { drawHref, listHref, parseRoundInput } from "@/lib/draw-navigation";
 import type { DrawRangeResult, DrawResult } from "@/lib/draw-reader";
 import { mergeDrawRange } from "@/lib/draw-refresh";
+import { consumeSearchVisit, expectSearchVisit } from "@/lib/draw-visit";
 
 import {
   AnalysisPanel,
@@ -115,8 +117,10 @@ function Search({
   to,
   query,
   setQuery,
+  confirmedEpisode,
 }: {
   latest: number | null;
+  confirmedEpisode?: number;
   to?: number;
   query: string;
   setQuery: (value: string) => void;
@@ -134,6 +138,10 @@ function Search({
           return;
         }
         setError("");
+        if (expectSearchVisit(parsed.episode!, confirmedEpisode)) {
+          trackLottoEvent({ name: "draw_search_complete" });
+          return;
+        }
         router.push(drawHref(parsed.episode!, to));
       }}
       noValidate
@@ -362,6 +370,18 @@ export function DrawDetailScreen({
   );
   const latest = latestNumber(data.latest),
     target = data.target;
+  const tracked = useRef(false);
+  useEffect(() => {
+    if (!data.target.draw) {
+      consumeSearchVisit(episode);
+      return;
+    }
+    if (tracked.current) return;
+    tracked.current = true;
+    trackLottoEvent({ name: "draw_detail_view" });
+    if (consumeSearchVisit(episode))
+      trackLottoEvent({ name: "draw_search_complete" });
+  }, [data.target.draw, episode]);
   return (
     <section aria-busy={busy}>
       <div className="flex flex-wrap justify-between gap-2">
@@ -380,7 +400,13 @@ export function DrawDetailScreen({
         </Link>
       </div>
       <Heading>제 {episode}회 당첨번호</Heading>
-      <Search latest={latest} to={to} query={query} setQuery={setQuery} />
+      <Search
+        latest={latest}
+        to={to}
+        query={query}
+        setQuery={setQuery}
+        confirmedEpisode={target.draw ? episode : undefined}
+      />
       {error && <Notice title={error} />}
       {latest === null && (
         <Notice title="최신 상한 미확인">
@@ -483,6 +509,7 @@ function HistoryAnalysis({ draw }: { draw: NonNullable<DrawResult["draw"]> }) {
       history={history}
       loading={loading}
       onRetry={() => {
+        trackLottoEvent({ name: "draw_history_retry" });
         setLoading(true);
         setAttempt((value) => value + 1);
       }}

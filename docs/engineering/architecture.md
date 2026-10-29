@@ -36,7 +36,7 @@
 
 ## 과거 회차 조회 경계
 
-- `src/lib/draw-reader.ts`: 생성기의 최근5회 조회와 독립된 단건(`readDraw`), 최신 확인(`readLatest`), 최대20개 구간(`readRange`), 대상 이전 최대5회(`readPrevious`) 조회. 네트워크·시계·캐시를 주입할 수 있다. `src/lib/draw-dhlottery.ts`의 `fetchDraw`/`fetchDrawRange`/`fetchDrawPrevious`가 서버에서 Next Data Cache를 연결한다. 아직 제품 페이지나 공개 API에 연결하지 않는다.
+- `src/lib/draw-reader.ts`: 생성기의 최근5회 조회와 독립된 단건(`readDraw`), 최신 확인(`readLatest`), 최대20개 구간(`readRange`), 대상 이전 최대5회(`readPrevious`) 조회. 네트워크·시계·캐시를 주입할 수 있다. `src/lib/draw-dhlottery.ts`의 `fetchDraw`/`fetchDrawRange`/`fetchDrawPrevious`가 서버에서 Next Data Cache를 연결한다. `/draw` 및 `/draw/[round]`와 `/api/lotto/draws` 계열 API에 연결한다.
 - 구간은 `to`부터 `max(1,to-19)`까지 최신순 슬롯을 유지한다. 누락을 다른 회차로 채우지 않으며 `missingEpisodes`로 보고한다. 목록 조회는 분석용 이전5회를 추가 요청하지 않는다. 상세 대상과 이전 기록은 독립 호출·재시도할 수 있고 같은 회차의 진행 중 요청은 공유한다.
 - 단건은 양의 안전한 정수만 받는다. 구간은 정상 최신 확인값이 있을 때 상한을 검사하고, 기본 최신 구간은 최신 확인이 불가능하면 `latest-unknown`이다. 명시된 과거 구간/단건은 최신 상한을 몰라도 원천에서 확인할 수 있다. 단건 함수 자체는 최신 상한을 추가 조회하지 않으므로 검색의 확인된 상한 검사는 호출 경계에서 수행한다.
 - 슬롯은 `fresh`/`stale`/`empty`/`unavailable`/`invalid-range`/`cancelled`, 구간은 추가로 `partial`/`latest-unknown`/`insufficient-history`를 구분한다. `empty`는 정상 형태의 빈 원천 응답이며 회차가 존재하지 않는다는 뜻이 아니다. `checkedAt`과 `sourceUrl`은 슬롯별로 유지한다. 초기 회차의 이전5회 부족은 `insufficient-history`이며 존재하는 이전 슬롯은 별도로 사용할 수 있다.
@@ -59,3 +59,9 @@
 - 손상 기록이 있으면 복구 가능한 정상 기록을 표시하되 원본을 보호하기 위해 변경을 막는다. 읽기·쓰기 실패를 성공으로 안내하지 않는다. 기존 10개 초과 기록도 자르지 않으며, 새 저장만 최대 10개로 제한한다.
 - 저장·삭제는 매번 저장소를 다시 읽어 다른 탭의 이미 반영된 변경을 보존한다. `storage` 이벤트로 화면을 갱신하지만 localStorage의 동시 쓰기를 원자적으로 보장하지는 않는다.
 - `_lib/number-copy.ts`는 클립보드 쓰기가 완료된 뒤 성공을 반환하고 미지원·거부·실패는 재시도 안내로 반환한다.
+
+## 회차 페이지와 검색 정보·분석 이벤트
+
+- `draw-metadata.ts`는 목록·상세의 제목/설명/OG/Twitter/canonical을 함께 생성한다. 실패·미확인·잘못된 주소는 noindex와 조회 상태 설명을 사용한다. 상세 canonical은 복귀 쿼리를 제외한다. 서버 페이지와 metadata는 React cache로 요청 안에서 같은 조회 결과를 사용한다.
+- 상세는 조건별 판정 요약 후 설명·근거를 표시한다. 이전 기록은 클라이언트에서 독립 요청하고 같은 구간 재시도는 정상 슬롯을 stale로 보존한다. 상세 인접 회차 이동은 제공하지 않는다.
+- `components/analytics.tsx`는 경로 변경의 수동 page_view를 담당한다. `analytics-page.ts`가 운영 허용 조건과 전송 경로·제목·referrer를 제한한다. `draw-visit.ts`는 검색 제출과 정상 상세 표시를 연결하며 같은 회차 재검색은 즉시 완료한다. 입력값을 분석 이벤트에 넣지 않는다.

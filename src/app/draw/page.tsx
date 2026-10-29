@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import { cache } from "react";
 
 import { fetchDrawRange } from "@/lib/draw-dhlottery";
+import { drawListMetadata, invalidDrawMetadata } from "@/lib/draw-metadata";
 import {
   type DrawQuery,
   listHref,
@@ -9,17 +11,16 @@ import {
 
 import { DrawListScreen, InvalidDrawScreen } from "./_components/draw-screens";
 
+const readList = cache((to?: number) => fetchDrawRange(to));
+
 export async function generateMetadata({
   searchParams,
 }: {
   searchParams: Promise<DrawQuery>;
 }): Promise<Metadata> {
   const query = parseDrawQuery(await searchParams);
-  return {
-    title: "회차별 당첨번호 | DATWE 다음주 퇴사",
-    alternates: { canonical: query.valid ? listHref(query.to) : "/draw" },
-    ...(!query.valid ? { robots: { index: false, follow: false } } : {}),
-  };
+  if (!query.valid) return invalidDrawMetadata();
+  return drawListMetadata(await readList(query.to), query.to);
 }
 export default async function DrawPage({
   searchParams,
@@ -28,7 +29,7 @@ export default async function DrawPage({
 }) {
   const query = parseDrawQuery(await searchParams);
   if (!query.valid) return <InvalidDrawScreen />;
-  const initial = await fetchDrawRange(query.to);
+  const initial = await readList(query.to);
   return (
     <DrawListScreen key={listHref(query.to)} initial={initial} to={query.to} />
   );

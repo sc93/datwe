@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import { cache } from "react";
 
 import { loadDrawDetail } from "@/lib/draw-detail";
 import { fetchDraw, fetchLatestDraw } from "@/lib/draw-dhlottery";
+import { drawDetailMetadata, invalidDrawMetadata } from "@/lib/draw-metadata";
 import {
   drawHref,
   type DrawQuery,
@@ -18,17 +20,30 @@ type Props = {
   params: Promise<{ round: string }>;
   searchParams: Promise<DrawQuery>;
 };
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { round } = await params,
-    parsed = parseRoundInput(round, null);
-  const valid = /^\d+$/.test(round) && parsed.error === null;
-  return {
-    title: valid
-      ? `제 ${parsed.episode}회 당첨번호 | DATWE 다음주 퇴사`
-      : "주소 확인 | DATWE 다음주 퇴사",
-    alternates: { canonical: valid ? drawHref(parsed.episode!) : "/draw" },
-    ...(!valid ? { robots: { index: false, follow: false } } : {}),
-  };
+const readDetail = cache((episode: number) =>
+  loadDrawDetail(episode, {
+    latest: () => fetchLatestDraw(),
+    draw: fetchDraw,
+  }),
+);
+export async function generateMetadata({
+  params,
+  searchParams,
+}: Props): Promise<Metadata> {
+  const { round } = await params;
+  const parsed = parseRoundInput(round, null);
+  const query = parseDrawQuery(await searchParams);
+  if (!/^\d+$/.test(round) || parsed.error || !query.valid)
+    return invalidDrawMetadata();
+  const data = await readDetail(parsed.episode!);
+  if (
+    query.to !== undefined &&
+    data.latest.status === "fresh" &&
+    data.latest.draw &&
+    query.to > data.latest.draw.episode
+  )
+    return invalidDrawMetadata();
+  return drawDetailMetadata(data, parsed.episode!);
 }
 export default async function DrawDetailPage({ params, searchParams }: Props) {
   const { round } = await params,
@@ -37,10 +52,7 @@ export default async function DrawDetailPage({ params, searchParams }: Props) {
   if (!/^\d+$/.test(round) || parsed.error || !query.valid)
     return <InvalidDrawScreen />;
   const episode = parsed.episode!;
-  const initial = await loadDrawDetail(episode, {
-    latest: () => fetchLatestDraw(),
-    draw: fetchDraw,
-  });
+  const initial = await readDetail(episode);
   if (
     query.to !== undefined &&
     initial.latest.status === "fresh" &&

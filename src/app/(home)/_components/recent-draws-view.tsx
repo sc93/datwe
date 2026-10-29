@@ -7,6 +7,8 @@ import { DrawNumbers } from "@/components/draw-numbers";
 import { Button } from "@/components/ui/button";
 import type { LottoData } from "@/lib/lotto-data";
 
+import { trackLottoEvent } from "../_lib/analytics";
+
 const OFFICIAL_RESULT_URL = "https://www.dhlottery.co.kr/lt645/result";
 
 function dateLabel(date: string) {
@@ -109,6 +111,7 @@ export function RecentDrawsView({
       )}
       <Link
         href="/draw"
+        onClick={() => trackLottoEvent({ name: "draw_list_open" })}
         className="text-primary mt-6 flex min-h-11 items-center justify-between gap-2 border-y py-3 text-sm font-medium"
       >
         지난 당첨번호 보기 <ArrowRight aria-hidden="true" className="size-4" />
