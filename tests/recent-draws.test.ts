@@ -15,7 +15,7 @@ function render(data = completeData(), isRefreshing = false) {
     createElement(RecentDrawsView, { data, isRefreshing, onRefresh: () => {} }),
   );
 }
-test("메인에 최신 회차의 날짜·본번호6개·보너스를 구분하고 최근5회를 제공한다", () => {
+test("메인 최신 번호를 유지하고 지난 당첨번호 전용 목록으로 연결한다", () => {
   const html = render();
   assert.match(html, /최근 당첨번호/);
   assert.match(html, /제 1247회/);
@@ -23,8 +23,9 @@ test("메인에 최신 회차의 날짜·본번호6개·보너스를 구분하�
   assert.match(html, /aria-label="본번호"/);
   assert.match(html, /aria-label="보너스 번호"/);
   assert.match(html, />24<\/span>/);
-  assert.match(html, /지난 회차 보기/);
-  assert.ok(html.indexOf("제 1247회") < html.indexOf("제 1246회"));
+  assert.match(html, /지난 당첨번호 보기/);
+  assert.match(html, /href="\/draw"/);
+  assert.doesNotMatch(html, /<details|제 1246회/);
   assert.match(html, /https:\/\/www\.dhlottery\.co\.kr\/lt645\/result/);
 });
 test("갱신 지연 문구 없이 회차와 당첨번호를 유지한다", () => {
@@ -45,7 +46,7 @@ test("부분 누락은 확인된 회차만 표시하고 누락된 최신 회차�
   const html = render(data);
   assert.match(html, /일부 회차/);
   assert.match(html, /최신 회차의 번호를 확인하지 못했어요/);
-  assert.match(html, /제 1246회/);
+  assert.doesNotMatch(html, /제 1246회/);
   assert.doesNotMatch(html, /data-slot="latest-draw"/);
   assert.match(html, /1247/);
 });

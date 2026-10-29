@@ -1,12 +1,11 @@
 "use client";
 
-import { ChevronDown, ExternalLink, Plus, RefreshCw } from "lucide-react";
+import { ArrowRight, ExternalLink, RefreshCw } from "lucide-react";
+import Link from "next/link";
 
-import { LottoBall } from "@/components/lotto-ball";
+import { DrawNumbers } from "@/components/draw-numbers";
 import { Button } from "@/components/ui/button";
-import type { LottoData, LottoDraw } from "@/lib/lotto-data";
-
-import { trackLottoEvent } from "../_lib/analytics";
+import type { LottoData } from "@/lib/lotto-data";
 
 const OFFICIAL_RESULT_URL = "https://www.dhlottery.co.kr/lt645/result";
 
@@ -18,53 +17,6 @@ function dateLabel(date: string) {
 function checkedAtLabel(value: string) {
   const seoul = new Date(Date.parse(value) + 9 * 60 * 60 * 1000).toISOString();
   return `${seoul.slice(0, 10).replaceAll("-", ". ")}. ${seoul.slice(11, 16)}`;
-}
-
-function DrawNumbers({
-  draw,
-  compact = false,
-}: {
-  draw: LottoDraw;
-  compact?: boolean;
-}) {
-  return (
-    <div
-      className={`flex flex-wrap items-start justify-between gap-x-3 gap-y-3 ${compact ? "" : "mt-5 mb-6"}`}
-    >
-      <div
-        role="group"
-        aria-label="본번호"
-        className={compact ? "flex gap-1" : "flex gap-1.5 min-[480px]:gap-2"}
-      >
-        {draw.numbers.map((number) => (
-          <LottoBall
-            key={number}
-            number={number}
-            size={compact ? "sm" : "md"}
-            className={compact ? "size-7 text-[11px]" : undefined}
-          />
-        ))}
-      </div>
-      <div
-        role="group"
-        aria-label="보너스 번호"
-        className={`ml-auto flex items-start gap-2 ${compact ? "" : "border-l pl-3"}`}
-      >
-        <Plus
-          aria-hidden="true"
-          className={`text-muted-foreground shrink-0 ${compact ? "mt-2 size-3" : "mt-2.5 size-3.5 min-[480px]:mt-3.5"}`}
-        />
-        <div className="flex flex-col items-center gap-1">
-          <LottoBall
-            number={draw.bonus}
-            size={compact ? "sm" : "md"}
-            className={compact ? "size-7 text-[11px]" : undefined}
-          />
-          <span className="text-muted-foreground text-[10px]">보너스</span>
-        </div>
-      </div>
-    </div>
-  );
 }
 
 export function RecentDrawsView({
@@ -138,6 +90,11 @@ export function RecentDrawsView({
               ? "잠시 후 다시 확인해 주세요. 일반 번호 생성은 사용할 수 있어요."
               : "확인된 회차만 표시해요. 최근 5회 제외는 기록이 모두 확인된 뒤 사용할 수 있어요."}
           </p>
+          {data.missingEpisodes.length > 0 && (
+            <p className="mt-2">
+              확인하지 못한 회차: {data.missingEpisodes.join(", ")}
+            </p>
+          )}
           {data.checkedAt && (
             <p className="text-muted-foreground mt-2 text-[11px]">
               마지막 확인: {checkedAtLabel(data.checkedAt)}
@@ -150,58 +107,12 @@ export function RecentDrawsView({
           최신 회차의 번호를 확인하지 못했어요.
         </p>
       )}
-      {draws.length > 0 && (
-        <details
-          className="group mt-6 border-y"
-          onToggle={(event) => {
-            if (event.currentTarget.open)
-              trackLottoEvent({ name: "recent_draws_open" });
-          }}
-        >
-          <summary className="text-muted-foreground flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 py-3 text-xs [&::-webkit-details-marker]:hidden">
-            <span>
-              <span className="group-open:hidden">지난 회차 보기</span>
-              <span className="hidden group-open:inline">지난 회차 닫기</span>
-              <span className="ml-2 font-mono text-[11px]">
-                {draws.length}회
-              </span>
-            </span>
-            <ChevronDown
-              aria-hidden="true"
-              className="size-3.5 transition-transform group-open:rotate-180 motion-reduce:transition-none"
-            />
-          </summary>
-          {data.missingEpisodes.length > 0 && (
-            <p className="text-muted-foreground border-t py-3 text-xs leading-6">
-              확인하지 못한 회차:{" "}
-              {data.missingEpisodes
-                .map((episode) => `제 ${episode}회`)
-                .join(", ")}
-            </p>
-          )}
-          <ol className="divide-y border-t" aria-label="최근 회차 당첨번호">
-            {draws.map((draw) => (
-              <li
-                key={draw.episode}
-                className="flex flex-col gap-3 py-4 min-[480px]:flex-row min-[480px]:items-start min-[480px]:justify-between"
-              >
-                <div className="flex items-center justify-between gap-4 min-[480px]:flex-col min-[480px]:items-start min-[480px]:gap-1.5">
-                  <span className="text-xs font-semibold">
-                    제 {draw.episode}회
-                  </span>
-                  <time
-                    dateTime={draw.drawDate}
-                    className="text-muted-foreground font-mono text-[11px]"
-                  >
-                    {dateLabel(draw.drawDate)}
-                  </time>
-                </div>
-                <DrawNumbers draw={draw} compact />
-              </li>
-            ))}
-          </ol>
-        </details>
-      )}
+      <Link
+        href="/draw"
+        className="text-primary mt-6 flex min-h-11 items-center justify-between gap-2 border-y py-3 text-sm font-medium"
+      >
+        지난 당첨번호 보기 <ArrowRight aria-hidden="true" className="size-4" />
+      </Link>
       <div className="mt-2 flex flex-wrap items-center justify-between gap-x-4">
         <a
           href={OFFICIAL_RESULT_URL}
