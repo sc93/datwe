@@ -46,20 +46,21 @@ export default function Option() {
           조건 없이 바로 생성해도 좋아요.
         </p>
       </div>
-      <fieldset className="space-y-2">
-        <legend className="text-sm font-semibold">개인 번호</legend>
-        <p className="text-muted-foreground text-xs">
-          나만의 의미를 담은 번호를 꼭 포함해요.
-        </p>
-        <div className="grid grid-cols-2 gap-2">
-          <IncludeLuckyNumberOption />
-          <BossNameOption />
-        </div>
-      </fieldset>
       <details className="rounded-xl border p-3">
         <summary className="min-h-11 cursor-pointer content-center text-sm font-semibold">
-          조합 조건
+          번호 조건
         </summary>
+        <fieldset className="space-y-2">
+          <legend className="text-sm font-semibold">개인 번호</legend>
+          <p className="text-muted-foreground text-xs">
+            나만의 의미를 담은 번호를 꼭 포함해요.
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <IncludeLuckyNumberOption />
+            <BossNameOption />
+          </div>
+        </fieldset>
+        <h3 className="mt-4 mb-2 text-sm font-semibold">조합 조건</h3>
         <p className="text-muted-foreground mb-3 text-xs">
           원하는 규칙만 선택하세요. 최근 5회 제외와 직전 1개 포함은 함께 선택할
           수 없어요.
