@@ -85,3 +85,23 @@ test("저장된 이전 분석 근거는 확인 시각과 재조회 동작을 표
   assert.match(html, /겹친 번호/);
   assert.match(html, /불러오는 중/);
 });
+test("상세는 조건별 판정을 계산 근거보다 먼저 보여주고 역사 항목 로딩을 구분한다", () => {
+  const html = renderToStaticMarkup(
+    createElement(AnalysisPanel, {
+      draw: draw(6),
+      history: null,
+      loading: true,
+      onRetry: () => {},
+    }),
+  );
+  const summary = html.slice(
+    html.indexOf('aria-label="조건 충족 여부"'),
+    html.indexOf("상세 설명"),
+  );
+  assert.match(summary, /합계 100–170/);
+  assert.match(summary, /충족|미충족/);
+  assert.match(summary, /홀수 2 · 짝수 4/);
+  assert.equal((summary.match(/확인 중/g) ?? []).length, 2);
+  assert.ok(html.indexOf("조건 충족 여부") < html.indexOf("상세 설명"));
+  assert.ok(html.indexOf("상세 설명") < html.indexOf(" = "));
+});

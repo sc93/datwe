@@ -183,6 +183,15 @@ export function AnalysisPanel({
   );
   if (!analysis) return <Notice title="분석할 본번호를 확인하지 못했어요" />;
   const c = analysis.conditions;
+  const overview = [
+    { title: "합계 100–170", item: c.sum },
+    { title: "홀짝", item: c.oddEven },
+    { title: "3연번 제한", item: c.consecutive },
+    { title: "구간별 분포", item: c.sections },
+    { title: "직선·대각선 마킹 제한", item: c.marking },
+    { title: "이전 5회 본번호 제외", item: c.previousFive },
+    { title: "직전 본번호 정확히 1개", item: c.previousOne },
+  ];
   const historyRow = (five: boolean) => {
     const item = five ? c.previousFive : c.previousOne;
     const needsHistory = five ? draw.episode > 5 : draw.episode > 1;
@@ -244,6 +253,39 @@ export function AnalysisPanel({
       <p className="text-muted-foreground mt-2 text-xs leading-6">
         제 {draw.episode}회 본번호 6개 기준 · 보너스 제외
       </p>
+      <dl
+        aria-label="조건 충족 여부"
+        className="bg-muted/50 mt-4 rounded-lg border px-4"
+      >
+        {overview.map(({ title, item }) => {
+          const pending =
+            loading &&
+            item.status === "unavailable" &&
+            item.reason !== "insufficient-history";
+          const label = pending
+            ? "확인 중"
+            : {
+                met: "충족",
+                unmet: "미충족",
+                unavailable: "판정 불가",
+                observed: `홀수 ${analysis.summary.oddCount} · 짝수 ${analysis.summary.evenCount}`,
+              }[item.status];
+          return (
+            <div
+              key={title}
+              className="flex items-center justify-between gap-3 border-b py-3 last:border-0"
+            >
+              <dt className="min-w-0 text-sm">{title}</dt>
+              <dd
+                className={`shrink-0 text-xs font-medium ${item.status === "unmet" ? "text-destructive" : item.status === "met" ? "text-primary" : "text-muted-foreground"}`}
+              >
+                {label}
+              </dd>
+            </div>
+          );
+        })}
+      </dl>
+      <h3 className="mt-8 text-lg font-semibold">상세 설명</h3>
       <AnalysisRow title="합계 100–170" item={c.sum}>
         합계 {analysis.summary.sum} = {draw.numbers.join(" + ")}
       </AnalysisRow>
