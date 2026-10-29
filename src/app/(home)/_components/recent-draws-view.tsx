@@ -1,8 +1,12 @@
+"use client";
+
 import { ChevronDown, ExternalLink, Plus, RefreshCw } from "lucide-react";
 
 import { LottoBall } from "@/components/lotto-ball";
 import { Button } from "@/components/ui/button";
 import type { LottoData, LottoDraw } from "@/lib/lotto-data";
+
+import { trackLottoEvent } from "../_lib/analytics";
 
 const OFFICIAL_RESULT_URL = "https://www.dhlottery.co.kr/lt645/result";
 
@@ -147,7 +151,13 @@ export function RecentDrawsView({
         </p>
       )}
       {draws.length > 0 && (
-        <details className="group mt-6 border-y">
+        <details
+          className="group mt-6 border-y"
+          onToggle={(event) => {
+            if (event.currentTarget.open)
+              trackLottoEvent({ name: "recent_draws_open" });
+          }}
+        >
           <summary className="text-muted-foreground flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 py-3 text-xs [&::-webkit-details-marker]:hidden">
             <span>
               <span className="group-open:hidden">지난 회차 보기</span>

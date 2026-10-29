@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { LottoBall } from "@/components/lotto-ball";
 import { Button } from "@/components/ui/button";
 
+import { trackLottoEvent } from "../_lib/analytics";
 import { conditionLabel } from "../_lib/condition-summary";
 import { copyNumbers } from "../_lib/number-copy";
 import {
@@ -72,6 +73,7 @@ export default function Numbers() {
       }
       setSaved(result.items);
       setNotice({ error: false, text: "번호를 이 브라우저에 저장했어요." });
+      trackLottoEvent({ name: "save_complete" });
     } catch {
       setNotice({
         error: true,
@@ -105,12 +107,13 @@ export default function Numbers() {
       });
     }
   };
-  const handleCopy = async (values: number[]) => {
+  const handleCopy = async (values: number[], source: "result" | "saved") => {
     const result = await copyNumbers(
       values,
       navigator.clipboard?.writeText.bind(navigator.clipboard),
     );
     setNotice(result);
+    if (!result.error) trackLottoEvent({ name: "copy_complete", source });
   };
 
   return (
@@ -177,7 +180,7 @@ export default function Numbers() {
                 <Button
                   variant="outline"
                   className="min-h-11"
-                  onClick={() => void handleCopy(numbers)}
+                  onClick={() => void handleCopy(numbers, "result")}
                 >
                   번호 복사
                 </Button>
@@ -275,7 +278,7 @@ export default function Numbers() {
                     variant="ghost"
                     className="min-h-11"
                     aria-label={`${index + 1}번째 저장 번호 복사`}
-                    onClick={() => void handleCopy(item.numbers)}
+                    onClick={() => void handleCopy(item.numbers, "saved")}
                   >
                     복사
                   </Button>
