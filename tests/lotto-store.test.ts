@@ -160,3 +160,29 @@ test("대상 회차는 생성 당시 확인된 최신 회차 기준이며 갱신
   state.generate();
   assert.equal(useLottoStore.getState().resultContext?.targetEpisode, null);
 });
+
+test("완료 이벤트는 생성 성공 후에만 보내고 조건 ID는 신규 선택만 측정한다", () => {
+  const events: unknown[][] = [];
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: { gtag: (...args: unknown[]) => events.push(args) },
+  });
+  try {
+    const state = useLottoStore.getState();
+    state.setBossName("테스트이름");
+    state.setChecked("boss-name-exclusion", true);
+    state.setChecked("boss-name-exclusion", true);
+    state.generate();
+    state.setChecked("boss-name-exclusion", false);
+    state.setChecked("recent-5-times-not-appeared", true);
+    state.setChecked("include-lucky-number", true);
+    state.generate(); // 필수 입력이 없는 실패는 완료로 측정하지 않는다.
+    assert.deepEqual(events, [
+      ["event", "condition_select", { condition_id: "boss-name-exclusion" }],
+      ["event", "generate_complete", {}],
+      ["event", "condition_select", { condition_id: "include-lucky-number" }],
+    ]);
+  } finally {
+    Reflect.deleteProperty(globalThis, "window");
+  }
+});

@@ -1,36 +1,69 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# DATWE · 다음주 퇴사
 
-## Getting Started
+직장인의 작은 퇴사 로망을 담은 로또 번호 생성기입니다. 최근 당첨번호를 확인하고 원하는 조건으로 번호를 생성·저장합니다. 조건은 조합에만 반영되며 당첨 확률을 높이거나 당첨을 보장하지 않습니다.
 
-First, run the development server:
+운영 주소: [datwe.vercel.app](https://datwe.vercel.app/). 2026-10-29에 GitHub 저장소 About 링크와 실제 서비스 응답을 확인했습니다. 이 작업은 운영 배포를 포함하지 않습니다.
 
-```bash
+## 로컬 실행
+
+Next.js App Router · React · TypeScript · Tailwind CSS · Zustand · Radix UI를 사용합니다. 정확한 버전은 `package.json`과 `package-lock.json`을 참고하세요.
+
+```sh
+npm ci
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+[localhost:3000](http://localhost:3000)에서 확인합니다. 정상적인 `node_modules`가 있으면 재설치는 필요하지 않습니다. 프로덕션 빌드 확인은 다음과 같습니다.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```sh
+npm run build
+npm run start
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Google Fonts 다운로드와 당첨번호 외부 조회에는 네트워크 접근이 필요합니다. 실행 환경·캐시는 [배포 문서](docs/engineering/deployment.md)를 참고하세요.
 
-## Learn More
+## 구현된 동작과 제약
 
-To learn more about Next.js, take a look at the following resources:
+- 최신 완료 회차와 최근 5회의 본번호·보너스·추첨일, 누락·조회 실패·재시도 상태를 표시합니다. 외부 조회에 타임아웃과 Next Data Cache를 사용하며 영구 아카이브를 보장하지 않습니다.
+- 입력 없는 기본 생성과 개인 번호·조합 조건을 지원합니다. 충돌하는 조건과 데이터가 부족한 조건은 안내하며 조용히 무시하지 않습니다.
+- 생성 결과에 당시 조건과 알 수 있는 대상 회차를 고정합니다. 이름 원문은 저장하지 않고 파생 번호만 기록합니다.
+- `datwe-saved-numbers`의 정상 과거 기록을 보존합니다. 새 저장은 최대 10개이며 중복·한도 초과·저장소 실패를 안내합니다. 손상 기록이 있으면 원본 보호를 위해 변경을 막습니다. 저장은 기기·브라우저별이며 동시 탭 쓰기의 원자성은 보장하지 않습니다.
+- 생성 번호와 저장 번호를 복사할 수 있으며 클립보드 쓰기가 끝난 뒤에만 성공을 안내합니다.
+- 한국어 언어 태그, 검색 제목·설명, canonical, Open Graph, Twitter summary를 제공합니다. 공유 이미지는 포함하지 않습니다.
+- 회원가입·자동 당첨 확인·전체 회차 검색·운영 배포는 포함하지 않습니다.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 분석 이벤트
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+기존 GA4 측정 ID를 사용합니다. 프로덕션 빌드이면서 주소가 `https://datwe.vercel.app`일 때만 초기화합니다. 로컬·미리보기는 측정하지 않습니다. 페이지 주소는 운영 루트, 제목은 서비스 제목으로 고정하고 referrer를 비워 쿼리·외부 경로의 유입을 막습니다. Google signals와 광고 개인화는 비활성화합니다.
 
-## Deploy on Vercel
+| 이벤트              | 발생 시점          | 추가 필드                       |
+| ------------------- | ------------------ | ------------------------------- |
+| `generate_complete` | 번호 생성 성공     | 없음                            |
+| `save_complete`     | 브라우저 저장 성공 | 없음                            |
+| `copy_complete`     | 클립보드 쓰기 성공 | `source`: `result` 또는 `saved` |
+| `recent_draws_open` | 지난 회차를 펼침   | 없음                            |
+| `condition_select`  | 조건이 새로 선택됨 | `condition_id`: 등록된 조건 ID  |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+입력 원문, 이름, 날짜, 선택·생성·저장 번호, 저장 레코드 ID와 조건값을 전달하지 않습니다. 이벤트 객체를 그대로 보내지 않고 허용 필드만 새로 구성합니다. 실패·거부된 선택·선택 해제·같은 조건 재설정은 성공 이벤트로 측정하지 않습니다. 분석 스크립트가 없거나 차단·실패해도 제품 동작은 유지합니다. GA 로딩 전 이벤트는 재전송하지 않습니다.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+운영 GA 관리 화면의 수신, 데이터 스트림의 향상된 측정·사용자 정의 설정은 이번 로컬 검증에 포함하지 않았습니다. 실제 수집 설정은 운영 계정에서 확인해야 합니다.
+
+## 검증 근거
+
+2026-10-29, Node v24.14.0 · npm 11.4.2에서 검증했습니다.
+
+```sh
+npm test
+npm run lint
+./node_modules/.bin/tsc --noEmit
+npm run build
+```
+
+- 자동 검사: 로직 테스트 54개 통과. 조건·회차 검증, 부분/전체 외부 실패·타임아웃·캐시, 저장소 읽기/쓰기 실패·기존 기록 보존, 클립보드 거부·미지원, 이벤트 허용 필드와 분석 차단 시 동작을 포함합니다. lint·타입 검사·프로덕션 빌드 통과. 최초 제한된 환경에서는 Google Fonts 연결로 빌드가 실패했고 네트워크 권한을 허용한 재실행에서 통과했습니다.
+- 브라우저: 최종 프로덕션 빌드에서 320/390/1280px 기본 생성 → 조건 생성 → 저장 → 복사 → 삭제를 확인했습니다. 가로 넘침이 없었고 키보드 생성·삭제 및 삭제 후 저장 영역 제목 포커스를 확인했습니다. 행운 번호 입력 다이얼로그와 지난 회차 펼침도 확인했습니다. 테스트로 만든 저장 기록은 개별 삭제했습니다.
+- 메타데이터: 브라우저 DOM에서 한국어 언어, 제목·설명, 운영 canonical과 Open Graph 값을 확인했습니다. 홈의 중복 메타데이터를 제거해 루트 설정이 실제 응답에 반영되는 것을 확인했습니다.
+- 대비: 기본 밝은 테마 토큰의 본문·보조 글자·주요 버튼·오류와 다섯 번호 공 색상 조합을 WCAG 상대 휘도 공식으로 계산했습니다. 최소 대비는 빨강 공의 4.64:1입니다. 모든 상태의 자동 접근성 감사 결과를 의미하지 않습니다.
+- 축소 모션: 배포용 CSS의 `prefers-reduced-motion` 규칙과 생성 후 스크롤 분기를 코드 및 CSSOM으로 확인했습니다. OS 축소 모션을 바꾼 실제 재생 검증은 미실행입니다.
+- 실패 화면: 외부 조회 실패·회차 누락은 렌더 테스트, 저장·복사 실패는 주입 기반 로직 테스트로 확인했습니다. 실제 브라우저의 저장소·클립보드 권한을 강제로 바꾸는 검증은 미실행입니다.
+
+사용자 최종 검토에는 검색·공유 문구의 자연스러움과 사용 흐름·디자인 판단이 남아 있습니다. 기획·티켓 상태는 [GitHub Issues](https://github.com/sc93/datwe/issues)에서만 관리합니다.

@@ -8,6 +8,7 @@ import {
   type LottoData,
 } from "@/lib/lotto-data";
 
+import { trackLottoEvent } from "../_lib/analytics";
 import {
   EMPTY_INPUTS,
   generateLottoResult,
@@ -98,6 +99,7 @@ export const useLottoStore = create<LottoState & LottoActions>((set, get) => ({
       set({ numbers: null, error: "직전 회차를 확인한 뒤 선택할 수 있어요." });
       return;
     }
+    const wasChecked = get().checked[id];
     set((prev) => {
       const clear: Partial<LottoState> = {};
       if (id === "include-lucky-number" && !value) clear.luckyNumber = null;
@@ -113,6 +115,9 @@ export const useLottoStore = create<LottoState & LottoActions>((set, get) => ({
         ...clear,
       };
     });
+    if (value && !wasChecked) {
+      trackLottoEvent({ name: "condition_select", conditionId: id });
+    }
   },
 
   setLuckyNumber: (value) =>
@@ -236,6 +241,7 @@ export const useLottoStore = create<LottoState & LottoActions>((set, get) => ({
           conditions: [...selected].map((id) => ({ id, value: values[id] })),
         },
       });
+      trackLottoEvent({ name: "generate_complete" });
       return;
     }
 
