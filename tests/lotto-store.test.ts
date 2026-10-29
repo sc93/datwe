@@ -162,10 +162,18 @@ test("대상 회차는 생성 당시 확인된 최신 회차 기준이며 갱신
 });
 
 test("완료 이벤트는 생성 성공 후에만 보내고 조건 ID는 신규 선택만 측정한다", () => {
+  const oldEnv = { ...process.env };
+  Object.assign(process.env, {
+    NODE_ENV: "production",
+    NEXT_PUBLIC_GA_ENHANCED_MEASUREMENT_DISABLED: "true",
+  });
   const events: unknown[][] = [];
   Object.defineProperty(globalThis, "window", {
     configurable: true,
-    value: { gtag: (...args: unknown[]) => events.push(args) },
+    value: {
+      location: { origin: "https://datwe.vercel.app", pathname: "/" },
+      gtag: (...args: unknown[]) => events.push(args),
+    },
   });
   try {
     const state = useLottoStore.getState();
@@ -177,12 +185,29 @@ test("완료 이벤트는 생성 성공 후에만 보내고 조건 ID는 신규 
     state.setChecked("recent-5-times-not-appeared", true);
     state.setChecked("include-lucky-number", true);
     state.generate(); // 필수 입력이 없는 실패는 완료로 측정하지 않는다.
+    const page = {
+      page_path: "/",
+      page_location: "https://datwe.vercel.app/",
+      page_title: "다음주 퇴사 | 로또 번호 생성기",
+      page_referrer: "",
+    };
     assert.deepEqual(events, [
-      ["event", "condition_select", { condition_id: "boss-name-exclusion" }],
-      ["event", "generate_complete", {}],
-      ["event", "condition_select", { condition_id: "include-lucky-number" }],
+      [
+        "event",
+        "condition_select",
+        { condition_id: "boss-name-exclusion", ...page },
+      ],
+      ["event", "generate_complete", { ...page }],
+      [
+        "event",
+        "condition_select",
+        { condition_id: "include-lucky-number", ...page },
+      ],
     ]);
   } finally {
     Reflect.deleteProperty(globalThis, "window");
+    Object.assign(process.env, oldEnv);
+    if (oldEnv.NEXT_PUBLIC_GA_ENHANCED_MEASUREMENT_DISABLED === undefined)
+      delete process.env.NEXT_PUBLIC_GA_ENHANCED_MEASUREMENT_DISABLED;
   }
 });

@@ -23,3 +23,9 @@
 - 프로세스 메모리나 로컬 파일을 운영 영속 저장소로 사용하지 않는다. Vercel Data Cache의 보존 범위에 의존하므로 캐시 삭제·키 변경·첫 배포에서 이전 정상 기록이 없을 수 있다. 이때는 `partial` 또는 `unavailable`로 동작한다. 영구 아카이브를 보장하는 기능이 아니다.
 - 요청 시각 상태 계산을 위해 `connection()`은 캐시 콜백 밖에서 호출한다. 외부 응답은 캐시 내부에서 조회 후 검증하며 실패 응답 자체를 캐시하지 않는다.
 - 참고: https://nextjs.org/docs/app/api-reference/functions/unstable_cache
+
+## GA 활성화 조건
+
+향상된 측정의 원문 URL·검색어·폼·히스토리 자동 수집을 막기 위해 운영 데이터 스트림에서 향상된 측정 전체를 끈 것을 확인한 경우에만 `NEXT_PUBLIC_GA_ENHANCED_MEASUREMENT_DISABLED=true`로 빌드한다. 설정이 없거나 false면 GA 스크립트를 로드하지 않는다. 이 공개 환경변수는 계정 설정을 자동 변경하지 않으며 중지 여부를 검증하는 API도 아니다. 설정 변경 후 재확인 책임이 운영에 있다. 로컬·미리보기 origin은 활성화되지 않는다.
+
+`send_page_view:false`는 초기 자동 page_view만 제어하므로 향상된 측정 중지 확인을 대신하지 못한다. 수동 이벤트에는 정규화한 page_path/page_location/page_title 및 빈 page_referrer만 넣는다. 운영 수신·계정 측 설정은 로컬 테스트로 통과 처리하지 않는다.
