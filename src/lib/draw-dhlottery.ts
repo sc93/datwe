@@ -12,6 +12,11 @@ const readCache: DrawCache = (key, ttl, load) =>
 // 공유 메모리는 진행 중 요청/대기열만 보관한다. 데이터는 Next Data Cache에 둔다.
 const reader = createDrawReader({ cache: readCache });
 
+export async function fetchLatestDraw(signal?: AbortSignal) {
+  await connection();
+  return reader.readLatest({ signal });
+}
+
 export async function fetchDraw(episode: number, signal?: AbortSignal) {
   await connection();
   return reader.readDraw(episode, { signal });
