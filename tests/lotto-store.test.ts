@@ -117,3 +117,23 @@ test("화면을 오래 열어두면 데이터 의존 조건은 생성을 막고 
   useLottoStore.getState().generate();
   assert.equal(useLottoStore.getState().error, null);
 });
+
+test("서로 모순인 회차 조건의 두 번째 선택을 막고 화면 오류를 제공한다", () => {
+  const state = useLottoStore.getState();
+  state.setDrawData(completeData());
+  state.setChecked("recent-5-times-not-appeared", true);
+  state.setChecked("carry-over-one", true);
+  assert.equal(useLottoStore.getState().checked["carry-over-one"], false);
+  assert.match(useLottoStore.getState().error ?? "", /함께/);
+});
+
+test("조건 초기화는 선택과 개인 입력만 지우고 회차 데이터는 보존한다", () => {
+  const state = useLottoStore.getState();
+  state.setDrawData(completeData());
+  state.setLuckyNumber(7);
+  state.setChecked("include-lucky-number", true);
+  state.resetOptions();
+  assert.ok(Object.values(useLottoStore.getState().checked).every((v) => !v));
+  assert.equal(useLottoStore.getState().luckyNumber, null);
+  assert.equal(useLottoStore.getState().canUseRecentFive, true);
+});

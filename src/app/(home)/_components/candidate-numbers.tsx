@@ -51,9 +51,13 @@ export default function CandidateNumbers() {
     return null;
 
   return (
-    <div className="mt-4 space-y-1">
+    <details className="mt-4 space-y-2 rounded-xl border p-3">
+      <summary className="min-h-11 cursor-pointer content-center text-sm font-semibold">
+        번호 후보 보기
+      </summary>
       <p className="text-muted-foreground text-xs">
-        현재 조건으로 선택 가능한 번호
+        개별 번호 후보예요. 합계·분포 등 최종 조합 가능성을 보장하지 않아요.
+        초록색 번호가 후보예요.
       </p>
       <div className="flex flex-wrap gap-1">
         {Array.from({ length: 45 }, (_, i) => i + 1).map((n) => {
@@ -73,6 +77,6 @@ export default function CandidateNumbers() {
           );
         })}
       </div>
-    </div>
+    </details>
   );
 }

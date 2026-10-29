@@ -1,5 +1,7 @@
 "use client";
 
+import { Check } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 
 export default function OptionCheckbox({
@@ -45,6 +47,7 @@ export default function OptionCheckbox({
       aria-haspopup={opensDialog ? "dialog" : undefined}
       className="flex h-auto min-h-20 w-full min-w-0 flex-col gap-1 rounded-xl px-2 py-3 text-[11px] min-[480px]:text-sm"
     >
+      {checked && <Check aria-hidden="true" className="size-4" />}
       <span className="text-center leading-5 break-keep whitespace-normal">
         {label}
       </span>

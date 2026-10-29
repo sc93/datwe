@@ -38,45 +38,6 @@ function getAppearedInRecentDraws(recentDraws: number[][]): Set<number> {
   return set;
 }
 
-/** 1~45 중 조건에 맞는 풀에서 중복 없이 6개 뽑기 (오름차순) */
-function pick6FromPool(pool: number[], random = Math.random): number[] {
-  const shuffled = [...pool].sort(() => random() - 0.5);
-  return shuffled.slice(0, 6).sort((a, b) => a - b);
-}
-
-/** 고정 번호들 + 풀에서 나머지 채우기 */
-function pickWithFixed(
-  pool: number[],
-  fixed: number[],
-  random = Math.random,
-): number[] {
-  const set = new Set(fixed);
-  const rest = pool.filter((n) => !set.has(n));
-  if (rest.length < 6 - fixed.length) return [];
-  const need = 6 - fixed.length;
-  const picked = [...rest].sort(() => random() - 0.5).slice(0, need);
-  return [...fixed, ...picked].sort((a, b) => a - b);
-}
-
-/** 직전 회차에서 1개 + 풀에서 5개 (이월수 1개 포함) */
-function pick6WithCarryOne(
-  pool: number[],
-  lastDraw: number[],
-  random = Math.random,
-): number[] {
-  const inPool = lastDraw.filter((n) => pool.includes(n));
-  if (inPool.length === 0) return [];
-  const carry = inPool[Math.floor(random() * inPool.length)];
-  const rest = pool.filter((n) => n !== carry);
-  if (rest.length < 5) return [];
-  const five = [...rest].sort(() => random() - 0.5).slice(0, 5);
-  return [...five, carry].sort((a, b) => a - b);
-}
-
-const MIN_SUM = 100;
-const MAX_SUM = 169; // 170 미만
-const MAX_ATTEMPTS = 8000;
-
 /** 3연번 이상 있는지 */
 function has3Consecutive(nums: number[]): boolean {
   const sorted = [...nums].sort((a, b) => a - b);
@@ -132,288 +93,232 @@ function oddCountMatch(nums: number[], k: number): boolean {
   return odds === k;
 }
 
+export const EMPTY_INPUTS: LottoOptionInputs = {
+  luckyNumber: null,
+  resignDay: null,
+  bossName: null,
+  salaryDay: null,
+  oddCount: null,
+  carryOverNumber: null,
+};
+
+export function getNameNumber(name: string): number {
+  return Math.max(1, ((getStrokeCount(name.trim()) - 1) % 45) + 1);
+}
+
+type Failure = {
+  status: "invalid" | "impossible" | "exhausted";
+  message: string;
+};
+export type LottoResult = { status: "success"; numbers: number[] } | Failure;
 type CandidatePoolBase = {
   pool: number[];
   lastDraw: number[];
+  fixed: number[];
 };
+const integerIn = (n: number | null, max: number, min = 1): n is number =>
+  n !== null && Number.isInteger(n) && n >= min && n <= max;
 
-export function getCandidatePool(
-  selectedOptions: Set<LottoOptionId>,
-  recentDraws: number[][] = [],
-  inputs: LottoOptionInputs = {
-    luckyNumber: null,
-    resignDay: null,
-    bossName: null,
-    salaryDay: null,
-    oddCount: null,
-    carryOverNumber: null,
-  },
-): CandidatePoolBase | null {
-  let pool: number[] = Array.from({ length: 45 }, (_, i) => i + 1);
-
-  // 최근 5회차 미출현
-  if (
-    selectedOptions.has("recent-5-times-not-appeared") &&
-    recentDraws.length > 0
-  ) {
-    const appeared = getAppearedInRecentDraws(recentDraws);
-    const protectedSet = new Set<number>();
-    if (
-      inputs.luckyNumber != null &&
-      inputs.luckyNumber >= 1 &&
-      inputs.luckyNumber <= 45
-    ) {
-      protectedSet.add(inputs.luckyNumber);
-    }
-    if (inputs.carryOverNumber != null) {
-      protectedSet.add(inputs.carryOverNumber);
-    }
-    if (inputs.bossName && inputs.bossName.trim().length > 0) {
-      let n = getStrokeCount(inputs.bossName.trim());
-      while (n > 45) n -= 45;
-      if (n < 1) n = 1;
-      protectedSet.add(n);
-    }
-    pool = pool.filter(
-      (n) => !appeared.has(n) || protectedSet.has(n),
+function prepare(
+  selected: Set<LottoOptionId>,
+  draws: number[][],
+  inputs: LottoOptionInputs,
+): CandidatePoolBase | Failure {
+  const recent = selected.has("recent-5-times-not-appeared");
+  const carry = selected.has("carry-over-one");
+  const invalid = (message: string): Failure => ({
+    status: "invalid",
+    message,
+  });
+  if (recent && carry)
+    return invalid(
+      "최근 5회 제외와 직전 본번호 1개 포함은 함께 선택할 수 없어요. 하나를 해제해 주세요.",
     );
-    if (pool.length < 6) return null;
+  const validDraw = (draw: number[]) =>
+    draw.length === 6 &&
+    new Set(draw).size === 6 &&
+    draw.every((n) => integerIn(n, 45));
+  if (recent && (draws.length !== 5 || !draws.every(validDraw)))
+    return invalid("정확한 최근 5회 본번호가 필요해요.");
+  const lastDraw = draws.at(-1) ?? [];
+  if (carry && !validDraw(lastDraw))
+    return invalid("직전 회차 본번호를 확인해 주세요.");
+  const fixed: number[] = [];
+  for (const [id, value, max, label] of [
+    ["include-lucky-number", inputs.luckyNumber, 45, "행운 번호"],
+    ["resign-date-hash", inputs.resignDay, 31, "퇴사일"],
+    ["salary-day-energy", inputs.salaryDay, 31, "월급날"],
+  ] as const) {
+    if (!selected.has(id)) continue;
+    if (!integerIn(value, max))
+      return invalid(`${label}를 1~${max} 정수로 입력해 주세요.`);
+    fixed.push(
+      id === "salary-day-energy" ? Math.round((value * 45) / 31) : value,
+    );
   }
-
-  // 상사 이름 획수는 이제 "포함" 옵션이므로, 풀 자체는 건드리지 않음
-
-  const needLucky =
-    selectedOptions.has("include-lucky-number") &&
-    inputs.luckyNumber != null &&
-    inputs.luckyNumber >= 1 &&
-    inputs.luckyNumber <= 45 &&
-    pool.includes(inputs.luckyNumber);
-
-  const needCarryOne =
-    selectedOptions.has("carry-over-one") &&
-    recentDraws.length > 0 &&
-    (() => {
-      const last = recentDraws[recentDraws.length - 1];
-      return last.some((n) => pool.includes(n));
-    })();
-
-  const needSalary =
-    selectedOptions.has("salary-day-energy") &&
-    inputs.salaryDay != null &&
-    inputs.salaryDay >= 1 &&
-    inputs.salaryDay <= 31;
-  const salaryNumber = needSalary
-    ? Math.min(45, Math.max(1, Math.round((inputs.salaryDay! * 45) / 31)))
-    : null;
-  const needSalaryInPool =
-    needSalary && salaryNumber != null && pool.includes(salaryNumber);
-
-  // 희망 퇴사일 포함: 1~31 입력값을 그대로 포함
-  const needResignDay =
-    selectedOptions.has("resign-date-hash") &&
-    inputs.resignDay != null &&
-    inputs.resignDay >= 1 &&
-    inputs.resignDay <= 31 &&
-    pool.includes(inputs.resignDay);
-
-  const needBossInclude =
-    selectedOptions.has("boss-name-exclusion") &&
-    inputs.bossName != null &&
-    inputs.bossName.trim().length > 0;
-  const bossNumber = needBossInclude
-    ? (() => {
-        let n = getStrokeCount(inputs.bossName!.trim());
-        while (n > 45) n -= 45;
-        if (n < 1) n = 1;
-        return n;
-      })()
-    : null;
-
-  const needSumCondition = selectedOptions.has("sum-between-100-and-170");
-  const needOddCount =
-    selectedOptions.has("odd-even-balanced") &&
-    inputs.oddCount != null &&
-    inputs.oddCount >= 0 &&
-    inputs.oddCount <= 6;
-  const needNoSerial = selectedOptions.has("no-serial-numbers");
-  const needBalanced = selectedOptions.has("balanced-section");
-  const needNoDiagonal = selectedOptions.has("diagonal-pattern");
-
-  // 행운 번호 / 이름 획수 / 이월수는 선택 가능한 번호 목록에 항상 표시되도록 보정
-  const fixedForPool = new Set<number>();
-  if (
-    inputs.luckyNumber != null &&
-    inputs.luckyNumber >= 1 &&
-    inputs.luckyNumber <= 45
-  ) {
-    fixedForPool.add(inputs.luckyNumber);
+  if (selected.has("boss-name-exclusion")) {
+    if (!inputs.bossName?.trim()) return invalid("이름을 입력해 주세요.");
+    fixed.push(getNameNumber(inputs.bossName));
   }
-  if (needBossInclude && bossNumber != null) {
-    fixedForPool.add(bossNumber);
+  if (selected.has("odd-even-balanced") && !integerIn(inputs.oddCount, 6, 0))
+    return invalid(
+      "홀수 개수를 0~6 정수로 입력해 주세요. 짝수 개수와 합해 6개가 됩니다.",
+    );
+  if (carry && inputs.carryOverNumber !== null) {
+    if (
+      !integerIn(inputs.carryOverNumber, 45) ||
+      !lastDraw.includes(inputs.carryOverNumber)
+    )
+      return invalid("직전 본번호 중에서 이월수를 다시 선택해 주세요.");
+    fixed.push(inputs.carryOverNumber);
   }
-  if (
-    selectedOptions.has("carry-over-one") &&
-    inputs.carryOverNumber != null &&
-    inputs.carryOverNumber >= 1 &&
-    inputs.carryOverNumber <= 45
-  ) {
-    fixedForPool.add(inputs.carryOverNumber);
-  }
-  for (const n of fixedForPool) {
-    if (!pool.includes(n)) {
-      pool.push(n);
-    }
-  }
-
-  if (
-    !needSumCondition &&
-    !needOddCount &&
-    !needNoSerial &&
-    !needBalanced &&
-    !needNoDiagonal
-  ) {
-    const lastDraw =
-      recentDraws.length > 0 ? recentDraws[recentDraws.length - 1] : [];
-    return { pool, lastDraw };
-  }
-
-  const lastDraw =
-    recentDraws.length > 0 ? recentDraws[recentDraws.length - 1] : [];
-
-  return { pool, lastDraw };
+  const appeared = recent ? getAppearedInRecentDraws(draws) : new Set<number>();
+  if (fixed.some((n) => appeared.has(n)))
+    return invalid(
+      "고정 번호가 최근 5회 제외 번호와 겹쳐요. 고정 번호를 바꾸거나 제외 조건을 해제해 주세요.",
+    );
+  const pool = Array.from({ length: 45 }, (_, i) => i + 1).filter(
+    (n) => !appeared.has(n),
+  );
+  return { pool, lastDraw, fixed: [...new Set(fixed)].sort((a, b) => a - b) };
 }
 
-/**
- * 선택된 조건을 반영해 로또 번호 6개 생성.
- */
-export function generateLottoNumbers(
-  selectedOptions: Set<LottoOptionId>,
-  recentDraws: number[][] = [],
-  inputs: LottoOptionInputs = {
-    luckyNumber: null,
-    resignDay: null,
-    bossName: null,
-    salaryDay: null,
-    oddCount: null,
-    carryOverNumber: null,
-  },
-): number[] | null {
-  const base = getCandidatePool(selectedOptions, recentDraws, inputs);
-  if (!base) return null;
+export function getCandidatePool(
+  selected: Set<LottoOptionId>,
+  draws: number[][] = [],
+  inputs = EMPTY_INPUTS,
+): CandidatePoolBase | null {
+  const result = prepare(selected, draws, inputs);
+  return "status" in result ? null : result;
+}
 
-  const { pool, lastDraw } = base;
-  const fixedNumbers: number[] = [];
-  const needLucky =
-    selectedOptions.has("include-lucky-number") &&
-    inputs.luckyNumber != null &&
-    inputs.luckyNumber >= 1 &&
-    inputs.luckyNumber <= 45 &&
-    pool.includes(inputs.luckyNumber);
-  const needSalary =
-    selectedOptions.has("salary-day-energy") &&
-    inputs.salaryDay != null &&
-    inputs.salaryDay >= 1 &&
-    inputs.salaryDay <= 31;
-  const salaryNumber = needSalary
-    ? Math.min(45, Math.max(1, Math.round((inputs.salaryDay! * 45) / 31)))
-    : null;
-  const needSalaryInPool =
-    needSalary && salaryNumber != null && pool.includes(salaryNumber);
-  const needResignDay =
-    selectedOptions.has("resign-date-hash") &&
-    inputs.resignDay != null &&
-    inputs.resignDay >= 1 &&
-    inputs.resignDay <= 31 &&
-    pool.includes(inputs.resignDay);
-
-  const needBossInclude =
-    selectedOptions.has("boss-name-exclusion") &&
-    inputs.bossName != null &&
-    inputs.bossName.trim().length > 0;
-  const bossNumber = needBossInclude
-    ? (() => {
-        let n = getStrokeCount(inputs.bossName!.trim());
-        while (n > 45) n -= 45;
-        if (n < 1) n = 1;
-        return n;
-      })()
-    : null;
-
-  const needCarryOption = selectedOptions.has("carry-over-one");
-  const hasManualCarry =
-    needCarryOption &&
-    inputs.carryOverNumber != null &&
-    pool.includes(inputs.carryOverNumber);
-
-  if (needLucky) fixedNumbers.push(inputs.luckyNumber!);
+/** 5열×9행에서 떨어진 세 점도 같은 직선이면 제한한다. */
+export function matchesLottoConditions(
+  numbers: number[],
+  selected: Set<LottoOptionId>,
+  inputs: LottoOptionInputs,
+  lastDraw: number[],
+): boolean {
   if (
-    needSalaryInPool &&
-    salaryNumber != null &&
-    !fixedNumbers.includes(salaryNumber)
+    numbers.length !== 6 ||
+    new Set(numbers).size !== 6 ||
+    !numbers.every((n) => integerIn(n, 45))
   )
-    fixedNumbers.push(salaryNumber);
+    return false;
+  const sum = numbers.reduce((a, b) => a + b, 0);
+  return (
+    (!selected.has("sum-between-100-and-170") || (sum >= 100 && sum <= 170)) &&
+    (!selected.has("odd-even-balanced") ||
+      oddCountMatch(numbers, inputs.oddCount!)) &&
+    (!selected.has("no-serial-numbers") || !has3Consecutive(numbers)) &&
+    (!selected.has("balanced-section") || isBalancedSection(numbers)) &&
+    (!selected.has("diagonal-pattern") || !hasLinePattern(numbers)) &&
+    (!selected.has("carry-over-one") ||
+      numbers.filter((n) => lastDraw.includes(n)).length === 1)
+  );
+}
+
+/** Fisher–Yates: 각 단계에서 남은 요소를 균등하게 선택한다. */
+function shuffled(pool: number[], random: () => number): number[] {
+  const result = [...pool];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}
+
+export function generateLottoResult(
+  selected: Set<LottoOptionId>,
+  draws: number[][] = [],
+  inputs = EMPTY_INPUTS,
+  {
+    random = Math.random,
+    maxAttempts = 8000,
+  }: { random?: () => number; maxAttempts?: number } = {},
+): LottoResult {
+  const base = prepare(selected, draws, inputs);
+  if ("status" in base) return base;
+  const { pool, fixed, lastDraw } = base;
+  const impossible = (): Failure => ({
+    status: "impossible",
+    message:
+      "선택한 조건으로는 조합을 만들 수 없어요. 고정 번호나 조합 조건을 변경해 주세요.",
+  });
+  const carry = selected.has("carry-over-one");
+  const fixedCarry = fixed.filter((n) => lastDraw.includes(n));
+  if (carry && fixedCarry.length > 1) return impossible();
+  const rest = pool.filter(
+    (n) => !fixed.includes(n) && (!carry || !lastDraw.includes(n)),
+  );
+  const carryCandidates =
+    carry && fixedCarry.length === 0
+      ? lastDraw.filter((n) => pool.includes(n))
+      : [];
+  const needsCarry = carry && fixedCarry.length === 0;
+  const need = 6 - fixed.length - Number(needsCarry);
+  if (need < 0 || rest.length < need || (needsCarry && !carryCandidates.length))
+    return impossible();
+  const allCandidates = [...rest, ...carryCandidates].sort((a, b) => a - b);
+  const slots = 6 - fixed.length;
+  const fixedSum = fixed.reduce((a, b) => a + b, 0);
   if (
-    needResignDay &&
-    inputs.resignDay != null &&
-    !fixedNumbers.includes(inputs.resignDay)
+    selected.has("sum-between-100-and-170") &&
+    (fixedSum + allCandidates.slice(0, slots).reduce((a, b) => a + b, 0) >
+      170 ||
+      fixedSum + allCandidates.slice(-slots).reduce((a, b) => a + b, 0) < 100)
   )
-    fixedNumbers.push(inputs.resignDay);
-
-  if (
-    needBossInclude &&
-    bossNumber != null &&
-    pool.includes(bossNumber) &&
-    !fixedNumbers.includes(bossNumber)
-  ) {
-    fixedNumbers.push(bossNumber);
+    return impossible();
+  if (selected.has("odd-even-balanced")) {
+    const oddNeeded =
+      inputs.oddCount! - fixed.filter((n) => n % 2 === 1).length;
+    if (
+      oddNeeded < 0 ||
+      oddNeeded > slots ||
+      allCandidates.filter((n) => n % 2 === 1).length < oddNeeded ||
+      allCandidates.filter((n) => n % 2 === 0).length < slots - oddNeeded
+    )
+      return impossible();
   }
-
-  if (hasManualCarry && !fixedNumbers.includes(inputs.carryOverNumber!)) {
-    fixedNumbers.push(inputs.carryOverNumber!);
+  if (selected.has("no-serial-numbers") && has3Consecutive(fixed))
+    return impossible();
+  if (selected.has("diagonal-pattern") && hasLinePattern(fixed))
+    return impossible();
+  if (selected.has("balanced-section")) {
+    const section = (n: number) => (n < 10 ? 0 : Math.floor(n / 10));
+    const missing = [0, 1, 2, 3, 4].filter(
+      (s) => !fixed.some((n) => section(n) === s),
+    );
+    if (
+      missing.length > slots ||
+      missing.some((s) => !allCandidates.some((n) => section(n) === s))
+    )
+      return impossible();
   }
-
-  const canAutoCarry =
-    needCarryOption &&
-    !hasManualCarry &&
-    lastDraw.length > 0 &&
-    lastDraw.some((n) => pool.includes(n));
-  const random = Math.random;
-
-  const needSumCondition = selectedOptions.has("sum-between-100-and-170");
-  const needOddCount =
-    selectedOptions.has("odd-even-balanced") &&
-    inputs.oddCount != null &&
-    inputs.oddCount >= 0 &&
-    inputs.oddCount <= 6;
-  const needNoSerial = selectedOptions.has("no-serial-numbers");
-  const needBalanced = selectedOptions.has("balanced-section");
-  const needNoDiagonal = selectedOptions.has("diagonal-pattern");
-
-  const pick = (): number[] => {
-    if (canAutoCarry && lastDraw.length > 0) {
-      return pick6WithCarryOne(pool, lastDraw, random);
-    }
-    if (fixedNumbers.length > 0) {
-      return pickWithFixed(pool, fixedNumbers, random);
-    }
-    return pick6FromPool(pool, random);
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const autoCarry = needsCarry
+      ? [carryCandidates[Math.floor(random() * carryCandidates.length)]]
+      : [];
+    const numbers = [
+      ...fixed,
+      ...autoCarry,
+      ...shuffled(rest, random).slice(0, need),
+    ].sort((a, b) => a - b);
+    if (matchesLottoConditions(numbers, selected, inputs, lastDraw))
+      return { status: "success", numbers };
+  }
+  return {
+    status: "exhausted",
+    message:
+      "탐색 횟수 안에 조건에 맞는 번호를 찾지 못했어요. 불가능하다는 뜻은 아니에요. 다시 생성하거나 조건을 줄여 주세요.",
   };
+}
 
-  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-    const numbers = pick();
-    if (numbers.length === 0) return null;
-
-    if (needOddCount && !oddCountMatch(numbers, inputs.oddCount!)) continue;
-    if (needNoSerial && has3Consecutive(numbers)) continue;
-    if (needBalanced && !isBalancedSection(numbers)) continue;
-    if (needNoDiagonal && hasLinePattern(numbers)) continue;
-    if (needSumCondition) {
-      const sum = numbers.reduce((a, b) => a + b, 0);
-      if (sum < MIN_SUM || sum > MAX_SUM) continue;
-    }
-
-    return numbers;
-  }
-
-  return null;
+export function generateLottoNumbers(
+  selected: Set<LottoOptionId>,
+  draws: number[][] = [],
+  inputs = EMPTY_INPUTS,
+): number[] | null {
+  const result = generateLottoResult(selected, draws, inputs);
+  return result.status === "success" ? result.numbers : null;
 }
