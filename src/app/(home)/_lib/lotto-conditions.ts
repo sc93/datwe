@@ -1,3 +1,14 @@
+import {
+  countOddNumbers,
+  hasLinePattern,
+  hasThreeConsecutive as has3Consecutive,
+  intersectNumbers,
+  isBalancedSection,
+  isSumInRange,
+  isValidMainNumbers,
+  unionNumbers as getAppearedInRecentDraws,
+} from "@/lib/lotto-rules";
+
 import { getStrokeCount } from "./stroke-count";
 
 /**
@@ -28,70 +39,6 @@ export type LottoOptionInputs = {
   oddCount: number | null; // 0-6 (홀수 개수)
   carryOverNumber: number | null;
 };
-
-/** 최근 5회차에 한 번이라도 나온 번호 집합 */
-function getAppearedInRecentDraws(recentDraws: number[][]): Set<number> {
-  const set = new Set<number>();
-  for (const draw of recentDraws) {
-    for (const n of draw) set.add(n);
-  }
-  return set;
-}
-
-/** 3연번 이상 있는지 */
-function has3Consecutive(nums: number[]): boolean {
-  const sorted = [...nums].sort((a, b) => a - b);
-  for (let i = 0; i <= sorted.length - 3; i++) {
-    if (sorted[i + 1] === sorted[i] + 1 && sorted[i + 2] === sorted[i] + 2)
-      return true;
-  }
-  return false;
-}
-
-/** 번호 → 5x9 그리드 위치 (row 0-8, col 0-4) */
-function toGrid(n: number): { row: number; col: number } {
-  const i = n - 1;
-  return { row: Math.floor(i / 5), col: i % 5 };
-}
-
-/** 대각선/직선 3개 이상 있는지 (로또 용지 5열 x 9행) */
-function hasLinePattern(nums: number[]): boolean {
-  const points = nums.map(toGrid);
-  for (let i = 0; i < points.length; i++) {
-    for (let j = i + 1; j < points.length; j++) {
-      for (let k = j + 1; k < points.length; k++) {
-        const [a, b, c] = [points[i], points[j], points[k]];
-        const sameRow = a.row === b.row && b.row === c.row;
-        const sameCol = a.col === b.col && b.col === c.col;
-        const diag1 =
-          a.row - a.col === b.row - b.col && b.row - b.col === c.row - c.col;
-        const diag2 =
-          a.row + a.col === b.row + b.col && b.row + b.col === c.row + c.col;
-        if (sameRow || sameCol || diag1 || diag2) return true;
-      }
-    }
-  }
-  return false;
-}
-
-/** 번호대별 1개 이상 (1-9, 10-19, 20-29, 30-39, 40-45) */
-function isBalancedSection(nums: number[]): boolean {
-  const sections = [0, 0, 0, 0, 0]; // 1-9, 10-19, 20-29, 30-39, 40-45
-  for (const n of nums) {
-    if (n <= 9) sections[0]++;
-    else if (n <= 19) sections[1]++;
-    else if (n <= 29) sections[2]++;
-    else if (n <= 39) sections[3]++;
-    else sections[4]++;
-  }
-  return sections.every((c) => c >= 1);
-}
-
-/** 홀수 개수가 정확히 k개인지 */
-function oddCountMatch(nums: number[], k: number): boolean {
-  const odds = nums.filter((n) => n % 2 === 1).length;
-  return odds === k;
-}
 
 export const EMPTY_INPUTS: LottoOptionInputs = {
   luckyNumber: null,
@@ -134,10 +81,7 @@ function prepare(
     return invalid(
       "최근 5회 제외와 직전 본번호 1개 포함은 함께 선택할 수 없어요. 하나를 해제해 주세요.",
     );
-  const validDraw = (draw: number[]) =>
-    draw.length === 6 &&
-    new Set(draw).size === 6 &&
-    draw.every((n) => integerIn(n, 45));
+  const validDraw = isValidMainNumbers;
   if (recent && (draws.length !== 5 || !draws.every(validDraw)))
     return invalid("정확한 최근 5회 본번호가 필요해요.");
   const lastDraw = draws.at(-1) ?? [];
@@ -199,22 +143,16 @@ export function matchesLottoConditions(
   inputs: LottoOptionInputs,
   lastDraw: number[],
 ): boolean {
-  if (
-    numbers.length !== 6 ||
-    new Set(numbers).size !== 6 ||
-    !numbers.every((n) => integerIn(n, 45))
-  )
-    return false;
-  const sum = numbers.reduce((a, b) => a + b, 0);
+  if (!isValidMainNumbers(numbers)) return false;
   return (
-    (!selected.has("sum-between-100-and-170") || (sum >= 100 && sum <= 170)) &&
+    (!selected.has("sum-between-100-and-170") || isSumInRange(numbers)) &&
     (!selected.has("odd-even-balanced") ||
-      oddCountMatch(numbers, inputs.oddCount!)) &&
+      countOddNumbers(numbers) === inputs.oddCount) &&
     (!selected.has("no-serial-numbers") || !has3Consecutive(numbers)) &&
     (!selected.has("balanced-section") || isBalancedSection(numbers)) &&
     (!selected.has("diagonal-pattern") || !hasLinePattern(numbers)) &&
     (!selected.has("carry-over-one") ||
-      numbers.filter((n) => lastDraw.includes(n)).length === 1)
+      intersectNumbers(numbers, lastDraw).length === 1)
   );
 }
 
