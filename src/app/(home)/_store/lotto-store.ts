@@ -11,11 +11,14 @@ import {
 import {
   EMPTY_INPUTS,
   generateLottoResult,
+  getNameNumber,
   LOTTO_OPTION_IDS,
   type LottoOptionId,
 } from "../_lib/lotto-conditions";
+import type { SavedNumber } from "../_lib/saved-numbers";
 
 type LottoState = {
+  resultContext: Pick<SavedNumber, "targetEpisode" | "conditions"> | null;
   checked: Record<LottoOptionId, boolean>;
   numbers: number[] | null;
   error: string | null;
@@ -52,6 +55,7 @@ const initialChecked = LOTTO_OPTION_IDS.reduce(
 
 export const useLottoStore = create<LottoState & LottoActions>((set, get) => ({
   checked: initialChecked,
+  resultContext: null,
   numbers: null,
   error: null,
   recentDraws: [],
@@ -206,7 +210,32 @@ export const useLottoStore = create<LottoState & LottoActions>((set, get) => ({
       carryOverNumber,
     });
     if (result.status === "success") {
-      set({ numbers: result.numbers, error: null });
+      const values = {
+        "include-lucky-number": luckyNumber,
+        "boss-name-exclusion": bossName ? getNameNumber(bossName) : null,
+        "resign-date-hash": resignDay,
+        "salary-day-energy": salaryDay
+          ? Math.round((salaryDay * 45) / 31)
+          : null,
+        "odd-even-balanced": oddCount,
+        "carry-over-one":
+          result.numbers.find((n) => latestDraw?.numbers.includes(n)) ??
+          carryOverNumber,
+        "recent-5-times-not-appeared": null,
+        "sum-between-100-and-170": null,
+        "no-serial-numbers": null,
+        "balanced-section": null,
+        "diagonal-pattern": null,
+      };
+      set({
+        numbers: result.numbers,
+        error: null,
+        resultContext: {
+          targetEpisode:
+            state.canUseCarryOver && latestDraw ? latestDraw.episode + 1 : null,
+          conditions: [...selected].map((id) => ({ id, value: values[id] })),
+        },
+      });
       return;
     }
 

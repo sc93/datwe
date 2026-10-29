@@ -137,3 +137,26 @@ test("조건 초기화는 선택과 개인 입력만 지우고 회차 데이터�
   assert.equal(useLottoStore.getState().luckyNumber, null);
   assert.equal(useLottoStore.getState().canUseRecentFive, true);
 });
+
+test("생성 당시 조건 스냅샷은 이름 대신 파생 번호만 보관한다", () => {
+  const state = useLottoStore.getState();
+  state.setBossName("테스트이름");
+  state.setChecked("boss-name-exclusion", true);
+  state.generate();
+  const snapshot = useLottoStore.getState().resultContext;
+  assert.ok(snapshot);
+  assert.equal(snapshot.targetEpisode, null);
+  assert.equal(snapshot.conditions[0].id, "boss-name-exclusion");
+  assert.equal(typeof snapshot.conditions[0].value, "number");
+  assert.doesNotMatch(JSON.stringify(snapshot), /테스트이름/);
+});
+test("대상 회차는 생성 당시 확인된 최신 회차 기준이며 갱신돼도 바뀌지 않는다", () => {
+  const state = useLottoStore.getState();
+  state.setDrawData(completeData());
+  state.generate();
+  assert.equal(useLottoStore.getState().resultContext?.targetEpisode, 1248);
+  state.setDrawData({ ...completeData(), status: "stale" });
+  assert.equal(useLottoStore.getState().resultContext?.targetEpisode, 1248);
+  state.generate();
+  assert.equal(useLottoStore.getState().resultContext?.targetEpisode, null);
+});
