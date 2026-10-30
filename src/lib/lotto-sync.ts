@@ -165,14 +165,13 @@ export async function runSync(options: Options): Promise<SyncSummary> {
     const latestAllowed =
       !plan.latestRetryAt || Date.parse(plan.latestRetryAt) <= now();
     const latest = latestAllowed ? await collect() : null;
-    // 최신 확인 실패 시 추정한 최신/보정 창으로 수집을 확대하지 않는다.
+    // 최신 확인 실패 시 추정한 최신 회차로 수집을 확대하지 않는다.
     if (latest !== null && optional) {
       if (options.kind === "manual" && options.rounds?.length) {
         for (const round of options.rounds) {
           if (round <= latest) await collect(round);
         }
       } else {
-        if (latest > 1) await collect(latest - 1);
         const updated = await store.plan(lease);
         for (const round of [...updated.failures, ...updated.missing])
           await collect(round);

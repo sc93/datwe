@@ -17,7 +17,6 @@ const latest = {
   numbers: [8, 14, 21, 22, 42, 45],
   bonus: 24,
 };
-const earlier = { ...latest, episode: 1246, drawDate: "2026-10-17" };
 async function fixture() {
   const db = new PGlite();
   await db.exec(
@@ -69,9 +68,7 @@ test("수집: 최신 재사용·최대3요청·1초 간격·멱등 저장·공�
           draw:
             round === undefined
               ? latest
-              : round === 1246
-                ? earlier
-                : { ...latest, episode: round, drawDate: "2002-12-07" },
+              : { ...latest, episode: round, drawDate: "2002-12-07" },
           sourceUrl: "https://www.dhlottery.co.kr/lt645/result",
           verifiedAt: new Date().toISOString(),
         };
@@ -86,7 +83,7 @@ test("수집: 최신 재사용·최대3요청·1초 간격·멱등 저장·공�
       starts.map((x) => x - starts[0]),
       [0, 1000, 2000],
     );
-    assert.deepEqual(invalidated, [1247, 1246, 1]);
+    assert.deepEqual(invalidated, [1247, 1, 2]);
     assert.equal(
       (
         await db.query<Record<string, unknown>>(
@@ -171,7 +168,7 @@ test("부분 실패는 정상 회차를 보존하고 캐시 실패는 outbox에�
         clock += ms;
       },
       source: async (round) => {
-        if (round === 1246) throw Error("network raw secret must not escape");
+        if (round === 1) throw Error("network raw secret must not escape");
         return {
           draw: round === undefined ? latest : { ...latest, episode: round },
           sourceUrl: "https://www.dhlottery.co.kr/lt645/result",
@@ -187,7 +184,7 @@ test("부분 실패는 정상 회차를 보존하고 캐시 실패는 outbox에�
     assert.equal(
       (
         await db.query<Record<string, unknown>>(
-          "SELECT attempts FROM lotto.sync_failures WHERE round=1246",
+          "SELECT attempts FROM lotto.sync_failures WHERE round=1",
         )
       ).rows[0].attempts,
       1,
@@ -226,7 +223,7 @@ test("부분 실패는 정상 회차를 보존하고 캐시 실패는 outbox에�
   }
 });
 
-test("사용량 95%에서 원천0회, 85% 또는 미확인에서 과거·보정 재조회 중지", async () => {
+test("사용량 95%에서 원천0회, 85% 또는 미확인에서 과거 누락 수집 중지", async () => {
   for (const usage of [95, 85, null]) {
     const { db, store } = await fixture();
     let clock = Date.parse("2026-10-30T00:00:00Z");
@@ -451,3 +448,40 @@ test(
     }
   },
 );
+
+test("전체 적재 후에는 최신 확인만 하고 저장된 과거 회차의 실패 기록도 자동 재조회하지 않는다", async () => {
+  const { db, store } = await fixture();
+  const requested: (number | undefined)[] = [];
+  try {
+    await db.exec(`RESET ROLE;
+ INSERT INTO lotto.draws(round,draw_date,number_1,number_2,number_3,number_4,number_5,number_6,bonus,source_url,verified_at,content_hash)
+ SELECT g,DATE '2002-12-07'+(g-1)*7,8,14,21,22,42,45,24,'https://www.dhlottery.co.kr/lt645/result',now(),repeat('a',64) FROM generate_series(1,1247) g;
+ INSERT INTO lotto.sync_failures(round,attempts,next_retry_at,error_code) VALUES(600,1,now()-interval '1 day','network');
+ SET ROLE lotto_writer;`);
+    const result = await runSync({
+      store,
+      now: () => Date.parse("2026-10-30T00:00:00Z"),
+      source: async (round) => {
+        requested.push(round);
+        return {
+          draw: { ...latest, episode: round ?? 1247 },
+          sourceUrl: "https://www.dhlottery.co.kr/lt645/result",
+          verifiedAt: new Date().toISOString(),
+        };
+      },
+      invalidate: async () => {},
+    });
+    assert.deepEqual(requested, [undefined]);
+    assert.equal(result.requests, 1);
+    assert.equal(
+      (
+        await db.query<Record<string, unknown>>(
+          "SELECT count(*)::int n FROM lotto.draws",
+        )
+      ).rows[0].n,
+      1247,
+    );
+  } finally {
+    await db.close();
+  }
+});

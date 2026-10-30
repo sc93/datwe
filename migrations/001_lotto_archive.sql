@@ -108,7 +108,7 @@ BEGIN
     SELECT jsonb_build_object('latest',s.latest_confirmed_round,'latestCheckedAt',s.latest_checked_at,
       'latestRetryAt',s.next_latest_at,'usage',usage,
       'failures',COALESCE((SELECT jsonb_agg(f.round ORDER BY f.next_retry_at,f.round) FROM
-        (SELECT round,next_retry_at FROM lotto.sync_failures WHERE next_retry_at<=clock_timestamp() ORDER BY next_retry_at,round LIMIT 3) f),'[]'::jsonb),
+        (SELECT round,next_retry_at FROM lotto.sync_failures f WHERE next_retry_at<=clock_timestamp() AND NOT EXISTS(SELECT 1 FROM lotto.draws d WHERE d.round=f.round) ORDER BY next_retry_at,round LIMIT 3) f),'[]'::jsonb),
       'missing',COALESCE((SELECT jsonb_agg(m.round ORDER BY m.round) FROM
         (SELECT g AS round FROM generate_series(s.backfill_next_round,COALESCE(s.latest_confirmed_round,0)) g
          WHERE NOT EXISTS(SELECT 1 FROM lotto.draws x WHERE x.round=g)
