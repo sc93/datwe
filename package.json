@@ -10,9 +10,11 @@
     "lint:fix": "eslint --fix",
     "format": "prettier . --write",
     "format:check": "prettier . --check",
-    "test": "node --import tsx --test tests/*.test.ts"
+    "test": "node --import tsx --test tests/*.test.ts",
+    "archive:migrate": "tsx scripts/migrate-archive.ts"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.2.0",
     "cheerio": "^1.2.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -21,11 +23,13 @@
     "radix-ui": "^1.4.3",
     "react": "19.2.3",
     "react-dom": "19.2.3",
+    "server-only": "^0.0.1",
     "tailwind-merge": "^3.4.0",
     "tailwindcss-animate": "^1.0.7",
     "zustand": "^5.0.11"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.13",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

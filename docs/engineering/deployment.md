@@ -29,3 +29,34 @@
 향상된 측정의 원문 URL·검색어·폼·히스토리 자동 수집을 막기 위해 운영 데이터 스트림에서 향상된 측정 전체를 끈 것을 확인한 경우에만 `NEXT_PUBLIC_GA_ENHANCED_MEASUREMENT_DISABLED=true`로 빌드한다. 설정이 없거나 false면 GA 스크립트를 로드하지 않는다. 이 공개 환경변수는 계정 설정을 자동 변경하지 않으며 중지 여부를 검증하는 API도 아니다. 설정 변경 후 재확인 책임이 운영에 있다. 로컬·미리보기 origin은 활성화되지 않는다.
 
 `send_page_view:false`는 초기 자동 page_view만 제어하므로 향상된 측정 중지 확인을 대신하지 못한다. 수동 이벤트에는 정규화한 page_path/page_location/page_title 및 빈 page_referrer만 넣는다. 운영 수신·계정 측 설정은 로컬 테스트로 통과 처리하지 않는다.
+
+## DB 아카이브 관리 설정과 격리 검증
+
+운영 DDL·실제 데이터 적재·Cron 활성화·배포는 별도 승인 대상이다. 저장소의 코드는 기본적으로 실행을 거부하며, 환경변수를 자동 생성하거나 기존 연결 값을 추출하지 않는다.
+
+| 서버 전용 변수             | 용도                                                            |
+| -------------------------- | --------------------------------------------------------------- |
+| `DATABASE_READ_URL`        | `lotto_reader`만 상속하는 별도 로그인 역할                      |
+| `DATABASE_WRITE_URL`       | `lotto_writer`만 상속하는 별도 로그인 역할, Production에만 주입 |
+| `DATABASE_MIGRATION_URL`   | 스키마/역할 관리 명령 전용. 웹 런타임에 주입 금지               |
+| `DATABASE_PRODUCTION_HOST` | 운영 Neon endpoint 호스트. 비밀번호/URL이 아닌 대상 식별자      |
+| `DATABASE_ISOLATED_HOST`   | 해당 Preview/개발 브랜치의 별도 endpoint 호스트                 |
+| `CRON_SECRET`              | 32자 이상 서버 비밀값. Production에만 주입                      |
+| `LOTTO_ARCHIVE_ENABLED`    | 승인된 Production에서만 `true`                                  |
+
+접속 URL은 TLS(`sslmode=require`)를 요구한다. pooler 접미사를 정규화한 호스트를 대조하고, 개발/Preview의 운영 호스트 연결을 거부한다. 로그인 역할은 일반 SQL로 별도 생성해 필요한 비로그인 그룹만 부여하고 비밀번호는 승인된 비밀 관리 수단으로 설정한다. 런타임은 owner/DDL/역할 생성/Neon 관리자 권한을 가진 자격을 거부한다. reader는 관리 테이블 접근 및 쓰기 권한도 거부한다. 기존 Marketplace owner URL을 런타임 변수에 그대로 재사용하지 않는다. Preview마다 **서로 다른 실제 Neon 브랜치 endpoint**와 격리 자격을 주입해야 하며, 환경변수명만으로 연결 검증 완료라고 간주하지 않는다. Preview의 수집 웹 요청은 격리 DB 여부와 관계없이 거부한다.
+
+격리 마이그레이션은 `DATABASE_MIGRATION_URL`, `DATABASE_ISOLATED_HOST`, `DATABASE_PRODUCTION_HOST`를 비밀 관리 경로로 주입한 후 실행한다.
+
+```sh
+npm run archive:migrate
+npm run archive:migrate -- --apply
+```
+
+첫 명령은 대상 검증만 수행하는 dry-run이다. 두 번째는 격리 대상에만 SQL을 적용하고 테이블/인덱스 baseline을 출력한다. 적용은 Neon 드라이버의 실제 트랜잭션으로 실행한다. 트랜잭션 advisory lock과 버전/checksum으로 중복 적용·수정된 과거 마이그레이션을 막는다. DDL 오류는 버전 기록과 함께 롤백한다. 운영 URL을 이 명령에 넣지 않는다. down/DROP은 제공하지 않으며 운영 적용 전 export·검토가 필요하다.
+
+Neon의 용량·월 CU·전송량과 Vercel 함수 자원 사용률은 승인된 관리자가 확인하고, 그중 최댓값을 관리 자격으로 `lotto.sync_state.usage_percent`, 확인시각을 `usage_checked_at`에 기록한다. 공급자 API 자격을 런타임에 추가하지 않는다. 기록은 24시간 이내만 유효하다. 70%부터 응답/실행 요약의 `usage-warning`을 운영 경고로 확인하고 GitHub 이슈로 관리한다. 85%부터 과거/정정 재조회, 95%부터 모든 원천 요청과 회차 저장을 멈춘다. 사용량 미확인은 `usage-unknown`으로 경고하고 과거 적재를 멈추며 최신 확인만 허용한다. 이는 공급자 한도가 아닌 내부 상한이다.
+
+관리 GET/POST에는 `Authorization: Bearer <CRON_SECRET>`이 필요하다. POST 본문은 `{}` 또는 `{"rounds":[1,600]}`처럼 최대2회차만 받는다. 최신 확인도 1요청으로 계산하므로 한 실행 최대3요청을 유지한다. 수동 요청 역시 백오프·일일 예산을 공유한다. 운영 자격을 셸 히스토리·로그·URL 쿼리에 넣지 않는다. 실행 요약에는 허용된 상태/오류코드와 건수만 남긴다. DB에는 완료 실행 이력30일·예산90일을 보존하며 다음 lease 획득 때 정리한다. 미해결 실패는 자동 삭제하지 않는다.
+
+`config/vercel.cron-disabled.json`은 **비활성 예약 템플릿**이다. 루트 `vercel.json`에 연결하지 않았으므로 배포만으로 Cron이 활성화되지 않는다. 별도 운영 승인 후 기존 Vercel 설정과 병합하고 단일 `0 13 * * *` 예약을 활성화한다. KST 22시대 실행 목표이며 정각 실행·성공 보장은 없다. 실제 Vercel→공식 원천 접근, Preview 브랜치 연결과 Neon 로그인 자격 분리는 승인된 환경에서 추가 확인해야 한다.

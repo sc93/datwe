@@ -65,3 +65,12 @@
 - `draw-metadata.ts`는 목록·상세의 제목/설명/OG/Twitter/canonical을 함께 생성한다. 실패·미확인·잘못된 주소는 noindex와 조회 상태 설명을 사용한다. 상세 canonical은 복귀 쿼리를 제외한다. 서버 페이지와 metadata는 React cache로 요청 안에서 같은 조회 결과를 사용한다.
 - 상세는 조건별 판정 요약 후 설명·근거를 표시한다. 이전 기록은 클라이언트에서 독립 요청하고 같은 구간 재시도는 정상 슬롯을 stale로 보존한다. 상세 인접 회차 이동은 제공하지 않는다.
 - `components/analytics.tsx`는 경로 변경의 수동 page_view를 담당한다. `analytics-page.ts`가 운영 허용 조건과 전송 경로·제목·referrer를 제한한다. `draw-visit.ts`는 검색 제출과 정상 상세 표시를 연결하며 같은 회차 재검색은 즉시 완료한다. 입력값을 분석 이벤트에 넣지 않는다.
+
+## DB 아카이브 관리 경계
+
+- `migrations/001_lotto_archive.sql`은 `lotto` 스키마의 회차·공식 최신 포인터·lease/fencing·실패 큐·실행 요약·KST 일일 예산·캐시 재처리 outbox를 정의한다. `lotto_reader`/`lotto_writer`는 비로그인 권한 그룹이며, 마이그레이션 소유자와 분리한 로그인 역할에 필요한 그룹만 부여한다. 공개 reader는 `draws`와 `latest` view만 조회한다.
+- `lotto-archive/source.ts`는 관리 원천 응답과 canonical SHA-256을 검증한다. `lotto-archive/store.ts`는 파라미터화 SQL 경계다. 회차 저장은 단일 SQL 함수의 트랜잭션에서 state 행을 잠그고 DB 시각의 lease owner/token/만료를 재검사한 후 회차·최신 포인터·커서·outbox를 함께 커밋한다. 원천 요청 동안 DB 트랜잭션을 열어 두지 않는다.
+- `lotto-sync.ts`는 주입 가능한 시계·원천·저장소를 사용한다. 최신 응답을 최근2회 창에서 재사용하고 남는 요청으로 제한된 실패 큐/미저장 회차를 처리한다. 일일 100요청/40실행, 실행당 3요청/20초, 요청당 5초, 동시1개, 요청 시작 간격1초를 상한으로 둔다. 일일 카운터·직전 요청시각은 DB에 남겨 인스턴스/실행 사이에도 유지한다.
+- 403/429/차단 HTML은 실행을 중지하고 Retry-After와 최소 백오프를 함께 지킨다. 실패는 1→2→4→최대7일 후 재시도하며 수동 지정 회차도 대기시간과 예산을 우회하지 않는다. 정상 데이터는 실패·빈 응답으로 교체하지 않는다. 내용이 같으면 `verified_at`만 갱신하고 `updated_at`은 유지한다.
+- 커밋 이후 `lotto-db-round-N`, `lotto-db-list`, 필요한 경우 `lotto-db-latest` 태그를 무효화한다. 실패한 무효화는 다음 관리 실행에서 최대3회차씩 재시도한다. 기존 공개 원천 캐시와 분리되며 공개 DB 전환 시 이 태그를 연결해야 한다.
+- `/api/admin/lotto/sync`의 GET은 일일 Cron, POST는 인증된 수동 재처리다. 모든 웹 실행은 서버 전용 인증·Production·명시적 활성화·DB 대상/최소권한 검사를 요구한다. 공개 페이지·metadata·회차 API는 이 모듈을 호출하지 않는다. 공개 조회는 DB 전환 전까지 기존 reader를 사용한다.
