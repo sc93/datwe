@@ -16,8 +16,6 @@ export type Plan = {
   latest: number | null;
   latestCheckedAt: string | null;
   latestRetryAt: string | null;
-  usage: number | null;
-  failures: number[];
   missing: number[];
   pending: { round: number; latest: boolean }[];
 };
@@ -31,12 +29,7 @@ export function createArchiveStore(query: Query) {
     } catch (error) {
       const message = error instanceof Error ? error.message : "";
       const code = (
-        [
-          "lease-lost",
-          "request-budget",
-          "usage-limit",
-          "latest-regression",
-        ] as const
+        ["lease-lost", "request-budget", "latest-regression"] as const
       ).find((code) => message.includes(code));
       throw new SyncError(code ?? "storage");
     }
@@ -49,7 +42,7 @@ export function createArchiveStore(query: Query) {
     return rows[0].result;
   }
   return {
-    async acquire(owner: string, kind: "daily" | "manual" | "backfill") {
+    async acquire(owner: string, kind: "daily" | "manual") {
       const rows = await execute(
         "SELECT lotto.acquire_sync($1::uuid,$2) AS result",
         [owner, kind],
@@ -97,7 +90,7 @@ export function createArchiveStore(query: Query) {
   };
 }
 
-/** #31에서 공개 reader에 연결한다. 수집/관리 테이블을 조회하지 않는다. */
+/** #36에서 공개 reader에 연결한다. 수집/관리 테이블을 조회하지 않는다. */
 export function createArchiveReader(query: Query) {
   return {
     async readDraw(round: number): Promise<LottoDraw | null> {

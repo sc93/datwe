@@ -10,7 +10,6 @@ export type FailureCode =
   | "invalid"
   | "empty"
   | "request-budget"
-  | "usage-limit"
   | "lease-lost"
   | "cache"
   | "storage"
