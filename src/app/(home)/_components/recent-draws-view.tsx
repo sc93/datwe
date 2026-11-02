@@ -77,20 +77,26 @@ export function RecentDrawsView({
           <DrawNumbers draw={latest} />
         </div>
       )}
-      {(data.status === "partial" || data.status === "unavailable") && (
+      {(data.status === "partial" ||
+        data.status === "not-collected" ||
+        data.status === "unavailable") && (
         <div
           role="status"
           className="bg-muted mt-4 rounded-xl border p-4 text-xs leading-6"
         >
           <strong className="block text-sm font-semibold">
-            {data.status === "unavailable"
-              ? "당첨번호를 불러오지 못했어요"
-              : "일부 회차를 확인하지 못했어요"}
+            {data.status === "not-collected"
+              ? "아직 수집한 당첨번호가 없어요"
+              : data.status === "unavailable"
+                ? "당첨번호를 불러오지 못했어요"
+                : "일부 회차를 확인하지 못했어요"}
           </strong>
           <p className="text-muted-foreground mt-1">
-            {data.status === "unavailable"
-              ? "잠시 후 다시 확인해 주세요. 일반 번호 생성은 사용할 수 있어요."
-              : "확인된 회차만 표시해요. 최근 5회 제외는 기록이 모두 확인된 뒤 사용할 수 있어요."}
+            {data.status === "not-collected"
+              ? "기록이 준비되면 확인할 수 있어요. 일반 번호 생성은 사용할 수 있어요."
+              : data.status === "unavailable"
+                ? "잠시 후 다시 확인해 주세요. 일반 번호 생성은 사용할 수 있어요."
+                : "확인된 회차만 표시해요. 최근 5회 제외는 기록이 모두 확인된 뒤 사용할 수 있어요."}
           </p>
           {data.missingEpisodes.length > 0 && (
             <p className="mt-2">

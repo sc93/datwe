@@ -2,6 +2,7 @@ import { revalidateTag } from "next/cache";
 
 import { handleSyncRequest } from "@/lib/lotto-archive/admin";
 import { createOfficialSource } from "@/lib/lotto-archive/source";
+import { invalidateDrawCaches } from "@/lib/lotto-cache";
 import { archiveWriter } from "@/lib/lotto-db";
 import { runSync } from "@/lib/lotto-sync";
 
@@ -20,11 +21,10 @@ function handle(request: Request, kind: "daily" | "manual") {
       signal,
       deadlineAt,
       source: createOfficialSource(),
-      invalidate: async (round, latest) => {
-        revalidateTag(`lotto-db-round-${round}`, { expire: 0 });
-        revalidateTag("lotto-db-list", { expire: 0 });
-        if (latest) revalidateTag("lotto-db-latest", { expire: 0 });
-      },
+      invalidate: (round, latest) =>
+        invalidateDrawCaches([round], latest, (tag) =>
+          revalidateTag(tag, { expire: 0 }),
+        ),
     });
     console.info(JSON.stringify({ event: "lotto-sync", ...summary }));
     return summary;

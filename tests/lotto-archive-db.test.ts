@@ -4,6 +4,8 @@ import test from "node:test";
 
 import { PGlite } from "@electric-sql/pglite";
 
+import { createArchiveReader } from "../src/lib/lotto-archive/store";
+
 const owner = "00000000-0000-4000-8000-000000000001";
 const other = "00000000-0000-4000-8000-000000000002";
 const draw = {
@@ -185,6 +187,21 @@ test("격리 PostgreSQL: 제약·역할·fencing·멱등 정정·일일 할당�
         )
       ).rows[0].result,
     );
+    await db.exec("RESET ROLE; SET ROLE lotto_reader");
+    const reader = createArchiveReader(
+      async (sql, params) =>
+        (await db.query<Record<string, unknown>>(sql, params)).rows,
+    );
+    const snapshot = await reader.readRecord(1247);
+    assert.equal(snapshot?.draw.bonus, 25);
+    assert.equal(
+      snapshot?.sourceUrl,
+      "https://www.dhlottery.co.kr/lt645/result",
+    );
+    assert.ok(snapshot?.checkedAt.endsWith("Z"));
+    assert.equal((await reader.readLatest()).round, 1247);
+    assert.equal(await reader.readRecord(600), null);
+    await db.exec("RESET ROLE; SET ROLE lotto_writer");
     assert.deepEqual(
       (
         await db.query(

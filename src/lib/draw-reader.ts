@@ -6,19 +6,24 @@ export const DRAW_PAGE_SIZE = 20;
 export const LATEST_DRAW_TTL_SECONDS = 300;
 export const PAST_DRAW_TTL_SECONDS = 86_400;
 
-type Snapshot = { draw: LottoDraw; checkedAt: string; sourceUrl: string };
+export type DrawSnapshot = {
+  draw: LottoDraw;
+  checkedAt: string;
+  sourceUrl: string;
+};
 /** 캐시는 정상 스냅샷만 저장한다. load의 실패는 기존 정상 값을 교체하지 않는다. */
 export type DrawCache = (
   key: string,
   ttlSeconds: number,
-  load: () => Promise<Snapshot>,
-) => Promise<Snapshot>;
+  load: () => Promise<DrawSnapshot>,
+) => Promise<DrawSnapshot>;
 
 export type DrawResult = {
   episode: number | null;
   status:
     | "fresh"
     | "stale"
+    | "not-collected"
     | "empty"
     | "unavailable"
     | "invalid-range"
@@ -26,13 +31,20 @@ export type DrawResult = {
   draw: LottoDraw | null;
   checkedAt: string | null;
   sourceUrl: string;
-  failure: "http" | "network" | "timeout" | "invalid-response" | null;
+  failure:
+    | "http"
+    | "network"
+    | "timeout"
+    | "invalid-response"
+    | "database"
+    | null;
 };
 export type DrawRangeResult = {
   status:
     | "fresh"
     | "stale"
     | "partial"
+    | "not-collected"
     | "empty"
     | "unavailable"
     | "invalid-range"
@@ -47,6 +59,9 @@ export type DrawRangeResult = {
 };
 type RequestOptions = { signal?: AbortSignal };
 type ReaderOptions = {
+  loadSnapshot?: (episode?: number) => Promise<DrawSnapshot | null>;
+  isFresh?: (snapshot: DrawSnapshot, episode?: number) => boolean;
+  allowStoredLatest?: boolean;
   fetcher?: typeof fetch;
   cache?: DrawCache;
   now?: () => number;
@@ -82,7 +97,7 @@ export function createDrawReader(options: ReaderOptions = {}) {
   const now = options.now ?? Date.now;
   const cache: DrawCache = options.cache ?? ((_key, _ttl, load) => load());
   const inFlight = new Map<string, Promise<DrawResult>>();
-  const sourceInFlight = new Map<string, Promise<Snapshot>>();
+  const sourceInFlight = new Map<string, Promise<DrawSnapshot>>();
   const waiters: Array<() => void> = [];
   let active = 0;
 
@@ -99,13 +114,24 @@ export function createDrawReader(options: ReaderOptions = {}) {
     }
   }
 
-  function loadSource(n?: number): Promise<Snapshot> {
+  function loadSource(n?: number): Promise<DrawSnapshot> {
     const key = n === undefined ? "latest" : String(n);
     const existing = sourceInFlight.get(key);
     if (existing) return existing;
     const pending = limited(async () => {
       const signal = AbortSignal.timeout(options.timeoutMs ?? 5000);
       try {
+        if (options.loadSnapshot) {
+          let snapshot: DrawSnapshot | null;
+          try {
+            snapshot = await options.loadSnapshot(n);
+          } catch {
+            throw new SourceError(failureResult(n, "unavailable", "database"));
+          }
+          if (!snapshot)
+            throw new SourceError(failureResult(n, "not-collected"));
+          return snapshot;
+        }
         const res = await fetcher(sourceUrl(n), {
           method: "GET",
           cache: "no-store",
@@ -183,10 +209,13 @@ export function createDrawReader(options: ReaderOptions = {}) {
             checkedAt: snapshot.checkedAt,
             sourceUrl: snapshot.sourceUrl,
             failure: null,
-            status:
-              Number.isFinite(age) && age >= 0 && age < ttl * 1000
-                ? "fresh"
-                : "stale",
+            status: (
+              options.isFresh
+                ? options.isFresh(snapshot, n)
+                : Number.isFinite(age) && age >= 0 && age < ttl * 1000
+            )
+              ? "fresh"
+              : "stale",
           };
         } catch (error) {
           return error instanceof SourceError
@@ -236,9 +265,12 @@ export function createDrawReader(options: ReaderOptions = {}) {
               : "fresh"
             : good.length > 0
               ? "partial"
-              : slots.length > 0 && slots.every((s) => s.status === "empty")
-                ? "empty"
-                : "unavailable"),
+              : slots.length > 0 &&
+                  slots.every((s) => s.status === "not-collected")
+                ? "not-collected"
+                : slots.length > 0 && slots.every((s) => s.status === "empty")
+                  ? "empty"
+                  : "unavailable"),
     };
   }
 
@@ -281,11 +313,14 @@ export function createDrawReader(options: ReaderOptions = {}) {
       // 오래된 최신 포인터는 현재 상한으로 쓰지 않는다. 명시된 과거 구간은 별도로 조회한다.
       const confirmed =
         latest.status === "fresh" ? latest.draw?.episode : undefined;
-      if (to === undefined && confirmed === undefined)
+      const stored = options.allowStoredLatest
+        ? latest.draw?.episode
+        : undefined;
+      if (to === undefined && confirmed === undefined && stored === undefined)
         return rangeResult([], null, null, latest, "latest-unknown");
       if (to !== undefined && confirmed !== undefined && to > confirmed)
         return rangeResult([], null, to, latest, "invalid-range");
-      const upper = to ?? confirmed!;
+      const upper = to ?? confirmed ?? stored!;
       const lower = Math.max(1, upper - DRAW_PAGE_SIZE + 1);
       const episodes = Array.from(
         { length: upper - lower + 1 },

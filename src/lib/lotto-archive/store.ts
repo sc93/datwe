@@ -90,30 +90,39 @@ export function createArchiveStore(query: Query) {
   };
 }
 
-/** #36에서 공개 reader에 연결한다. 수집/관리 테이블을 조회하지 않는다. */
+/** 공개 DB reader는 추첨 기록과 공식 최신 view만 읽는다. */
 export function createArchiveReader(query: Query) {
+  async function readRecord(round: number) {
+    if (!Number.isSafeInteger(round) || round < 1 || round > 2147483647)
+      return null;
+    const [r] = await query(
+      "SELECT round,draw_date::text,number_1,number_2,number_3,number_4,number_5,number_6,bonus,source_url,verified_at FROM lotto.draws WHERE round=$1",
+      [round],
+    );
+    if (!r) return null;
+    const draw = canonicalDraw({
+      episode: Number(r.round),
+      drawDate: String(r.draw_date),
+      numbers: [1, 2, 3, 4, 5, 6].map((n) => Number(r[`number_${n}`])),
+      bonus: Number(r.bonus),
+    });
+    if (draw.episode !== round) throw Error("database-record");
+    const checkedAt = new Date(String(r.verified_at)).toISOString();
+    const sourceUrl = String(r.source_url);
+    if (new URL(sourceUrl).origin !== "https://www.dhlottery.co.kr")
+      throw Error("database-record");
+    return { draw, checkedAt, sourceUrl };
+  }
   return {
+    readRecord,
     async readDraw(round: number): Promise<LottoDraw | null> {
-      if (!Number.isInteger(round) || round < 1 || round > 2147483647)
-        return null;
-      const rows = await query(
-        "SELECT round,draw_date::text,number_1,number_2,number_3,number_4,number_5,number_6,bonus FROM lotto.draws WHERE round=$1",
-        [round],
-      );
-      const r = rows[0];
-      return r
-        ? canonicalDraw({
-            episode: Number(r.round),
-            drawDate: String(r.draw_date),
-            numbers: [1, 2, 3, 4, 5, 6].map((n) => Number(r[`number_${n}`])),
-            bonus: Number(r.bonus),
-          })
-        : null;
+      return (await readRecord(round))?.draw ?? null;
     },
     async readLatest() {
       const [row] = await query(
         "SELECT latest_confirmed_round,latest_checked_at FROM lotto.latest",
       );
+      if (!row) throw Error("database-latest");
       return {
         round:
           row.latest_confirmed_round === null
