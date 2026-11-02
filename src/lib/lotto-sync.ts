@@ -28,7 +28,7 @@ type Options = {
   deadlineAt?: number;
 };
 
-/** 공개 reader는 호출하지 않는다. 모든 실행이 DB lease와 일일 예산을 공유한다. */
+/** 공개 reader는 호출하지 않는다. 모든 실행이 DB lease·요청 간격·차단 대기를 공유한다. */
 export async function runSync(options: Options): Promise<SyncSummary> {
   const { store, source, invalidate } = options;
   const now = options.now ?? Date.now;
@@ -59,17 +59,10 @@ export async function runSync(options: Options): Promise<SyncSummary> {
     lease = await store.acquire(randomUUID(), options.kind ?? "daily");
     if (!lease) return result;
     const plan = await store.plan(lease);
-    if (plan.usage === null) result.warnings.push("usage-unknown");
-    else if (plan.usage >= 70) result.warnings.push("usage-warning");
     for (const pending of plan.pending) {
       if (now() + 1000 >= deadline) break;
       await clearPending(pending.round, pending.latest);
     }
-    if (plan.usage !== null && plan.usage >= 95) {
-      result.code = "usage-limit";
-      return result;
-    }
-    const optional = plan.usage !== null && plan.usage < 85;
     const tried = new Set<number>();
     async function collect(round?: number): Promise<number | null> {
       if (round !== undefined && tried.has(round)) return null;
@@ -166,15 +159,14 @@ export async function runSync(options: Options): Promise<SyncSummary> {
       !plan.latestRetryAt || Date.parse(plan.latestRetryAt) <= now();
     const latest = latestAllowed ? await collect() : null;
     // 최신 확인 실패 시 추정한 최신 회차로 수집을 확대하지 않는다.
-    if (latest !== null && optional) {
+    if (latest !== null) {
       if (options.kind === "manual" && options.rounds?.length) {
         for (const round of options.rounds) {
           if (round <= latest) await collect(round);
         }
       } else {
         const updated = await store.plan(lease);
-        for (const round of [...updated.failures, ...updated.missing])
-          await collect(round);
+        for (const round of updated.missing) await collect(round);
       }
     }
     result.status =

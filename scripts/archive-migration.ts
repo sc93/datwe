@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { readdir, readFile } from "node:fs/promises";
 
 /** 한 SQL statement의 암시적 트랜잭션 안에서 lock·checksum·DDL·버전을 반영한다. */
 export function migrationStatement(version: string, body: string) {
@@ -24,4 +25,21 @@ export function migrationStatement(version: string, body: string) {
    INSERT INTO lotto_migrations.versions(version,checksum) VALUES('${version}','${checksum}');
   END IF;
  END $migration$;`;
+}
+
+/** 파일명의 세 자리 버전순으로 읽는다. 동일 버전의 중복 파일은 거부한다. */
+export async function loadArchiveMigrations() {
+  const directory = new URL("../migrations/", import.meta.url);
+  const files = (await readdir(directory))
+    .filter((name) => /^\d{3}_.+\.sql$/.test(name))
+    .sort();
+  const versions = files.map((name) => name.slice(0, 3));
+  if (!files.length || new Set(versions).size !== files.length)
+    throw Error("migration-versions");
+  return Promise.all(
+    files.map(async (name) => ({
+      version: name.slice(0, 3),
+      body: await readFile(new URL(name, directory), "utf8"),
+    })),
+  );
 }

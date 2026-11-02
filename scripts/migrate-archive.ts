@@ -1,9 +1,7 @@
-import { readFile } from "node:fs/promises";
-
 import { neon } from "@neondatabase/serverless";
 
 import { checkDatabaseTarget } from "../src/lib/lotto-archive/admin";
-import { migrationStatement } from "./archive-migration";
+import { loadArchiveMigrations, migrationStatement } from "./archive-migration";
 
 async function main() {
   const raw = process.env.DATABASE_MIGRATION_URL;
@@ -11,16 +9,17 @@ async function main() {
   const sql = neon(raw!, {
     fetchOptions: { signal: AbortSignal.timeout(20000) },
   });
-  const body = await readFile(
-    new URL("../migrations/001_lotto_archive.sql", import.meta.url),
-    "utf8",
-  );
+  const migrations = await loadArchiveMigrations();
   if (process.argv.includes("--apply")) {
     await sql.transaction([
       sql.query("SELECT set_config('statement_timeout','10000',true)"),
-      sql.query(migrationStatement("001", body)),
+      ...migrations.map(({ version, body }) =>
+        sql.query(migrationStatement(version, body)),
+      ),
     ]);
-    console.log("격리 DB 마이그레이션 확인 완료: 001");
+    console.log(
+      `격리 DB 마이그레이션 확인 완료: ${migrations.map((m) => m.version).join(", ")}`,
+    );
   } else {
     console.log(
       "dry-run: 대상은 격리 DB입니다. DDL을 실행하지 않았습니다. --apply로 적용합니다.",

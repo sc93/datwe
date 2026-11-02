@@ -13,12 +13,18 @@ const draw = {
   bonus: 24,
 };
 
-test("격리 PostgreSQL: 제약·역할·fencing·멱등 정정·예산·보존", async () => {
+test("격리 PostgreSQL: 제약·역할·fencing·멱등 정정·일일 할당량 제거", async () => {
   const db = new PGlite();
   try {
     await db.exec(
       await readFile(
         new URL("../migrations/001_lotto_archive.sql", import.meta.url),
+        "utf8",
+      ),
+    );
+    await db.exec(
+      await readFile(
+        new URL("../migrations/002_regular_sync.sql", import.meta.url),
         "utf8",
       ),
     );
@@ -147,15 +153,6 @@ test("격리 PostgreSQL: 제약·역할·fencing·멱등 정정·예산·보존"
       }),
       /latest-regression/,
     );
-    await call("failure", { round: 2, code: "timeout" });
-    assert.equal(
-      (
-        await db.query<Record<string, unknown>>(
-          "SELECT attempts FROM lotto.sync_failures WHERE round=2",
-        )
-      ).rows[0].attempts,
-      1,
-    );
     await db.exec(
       "RESET ROLE; UPDATE lotto.sync_state SET lease_until=now()-interval '1 second'",
     );
@@ -169,27 +166,32 @@ test("격리 PostgreSQL: 제약·역할·fencing·멱등 정정·예산·보존"
     ).rows[0].result;
     assert.equal(recovered.token, 2);
     await assert.rejects(call("reserve"), /lease-lost/);
-    await db.exec(
-      "RESET ROLE; UPDATE lotto.sync_budget_daily SET source_requests=100",
+    await db.exec(`RESET ROLE;
+      INSERT INTO lotto.sync_budget_daily(day,source_requests,run_attempts) VALUES ((now() AT TIME ZONE 'Asia/Seoul')::date,100,40);
+      UPDATE lotto.sync_state SET usage_percent=100,usage_checked_at=now(),last_source_at=now()-interval '2 seconds';
+      SET ROLE lotto_writer;`);
+    await db.query("SELECT lotto.sync_action($1::uuid,2,'reserve','{}')", [
+      other,
+    ]);
+    await db.query(
+      `SELECT lotto.sync_action($1::uuid,2,'finish','{"status":"success"}')`,
+      [other],
     );
-    await assert.rejects(
-      db.query<Record<string, unknown>>(
-        "SELECT lotto.sync_action($1::uuid,2,'reserve','{}')",
-        [other],
-      ),
-      /request-budget/,
-    );
-    await db.exec(
-      "UPDATE lotto.sync_budget_daily SET run_attempts=40; UPDATE lotto.sync_state SET lease_until=now()-interval '1 second'",
-    );
-    assert.equal(
+    assert.ok(
       (
-        await db.query<Record<string, unknown>>(
+        await db.query<{ result: unknown }>(
           "SELECT lotto.acquire_sync($1::uuid,'daily') AS result",
-          [owner],
+          ["00000000-0000-4000-8000-000000000003"],
         )
       ).rows[0].result,
-      null,
+    );
+    assert.deepEqual(
+      (
+        await db.query(
+          "SELECT source_requests,run_attempts FROM lotto.sync_budget_daily",
+        )
+      ).rows,
+      [{ source_requests: 100, run_attempts: 40 }],
     );
   } finally {
     await db.close();
@@ -240,12 +242,18 @@ test("마이그레이션: 재실행·checksum·DDL 롤백을 보호한다", asyn
   }
 });
 
-test("DB 일일 예약은 실행 사이의 1초 간격과 KST 일 경계를 유지한다", async () => {
+test("DB 예약은 일일 카운터 없이 실행 사이의 1초 간격을 유지한다", async () => {
   const db = new PGlite();
   try {
     await db.exec(
       await readFile(
         new URL("../migrations/001_lotto_archive.sql", import.meta.url),
+        "utf8",
+      ),
+    );
+    await db.exec(
+      await readFile(
+        new URL("../migrations/002_regular_sync.sql", import.meta.url),
         "utf8",
       ),
     );
@@ -257,13 +265,86 @@ test("DB 일일 예약은 실행 사이의 1초 간격과 KST 일 경계를 유�
       db.query("SELECT lotto.sync_action($1::uuid,1,'reserve','{}')", [owner]),
       /request-budget/,
     );
-    const [row] = (
-      await db.query<Record<string, unknown>>(
-        "SELECT day=(clock_timestamp() AT TIME ZONE 'Asia/Seoul')::date AS kst,source_requests FROM lotto.sync_budget_daily",
-      )
-    ).rows;
-    assert.equal(row.kst, true);
-    assert.equal(row.source_requests, 1);
+    assert.equal(
+      (
+        await db.query<{ n: number }>(
+          "SELECT count(*)::int n FROM lotto.sync_budget_daily",
+        )
+      ).rows[0].n,
+      0,
+    );
+  } finally {
+    await db.close();
+  }
+});
+
+test("마이그레이션 파일을 버전순으로 읽고 001→002 적용·재실행 시 기존 데이터를 보존한다", async () => {
+  const { loadArchiveMigrations, migrationStatement } =
+    await import("../scripts/archive-migration");
+  const migrations = await loadArchiveMigrations();
+  assert.deepEqual(
+    migrations.map((m) => m.version),
+    ["001", "002"],
+  );
+  const db = new PGlite();
+  try {
+    await db.query(
+      migrationStatement(migrations[0].version, migrations[0].body),
+    );
+    await db.exec(`
+      INSERT INTO lotto.draws(round,draw_date,number_1,number_2,number_3,number_4,number_5,number_6,bonus,source_url,verified_at,content_hash)
+      VALUES(1247,'2026-10-24',8,14,21,22,42,45,24,'https://www.dhlottery.co.kr/lt645/result',now(),repeat('a',64));
+      INSERT INTO lotto.sync_failures(round,attempts,next_retry_at,error_code) VALUES(600,2,now(),'network');
+      INSERT INTO lotto.sync_budget_daily(day,source_requests,run_attempts) VALUES(current_date,100,40);
+      UPDATE lotto.sync_state SET usage_percent=99,usage_checked_at=now(),backfill_next_round=1;
+    `);
+    const before = (await db.query("SELECT * FROM lotto.draws")).rows;
+    for (const migration of migrations)
+      await db.query(migrationStatement(migration.version, migration.body));
+    assert.deepEqual(
+      (await db.query("SELECT * FROM lotto.draws")).rows,
+      before,
+    );
+    assert.equal(
+      (
+        await db.query<{ regular_from_round: number }>(
+          "SELECT regular_from_round FROM lotto.sync_state",
+        )
+      ).rows[0].regular_from_round,
+      1248,
+    );
+    assert.equal(
+      (
+        await db.query<{ attempts: number }>(
+          "SELECT attempts FROM lotto.sync_failures",
+        )
+      ).rows[0].attempts,
+      2,
+    );
+    // 재적용 시에도 경계와 기존 관리 기록을 보존한다.
+    await db.query(
+      migrationStatement(migrations[1].version, migrations[1].body),
+    );
+    assert.equal(
+      (
+        await db.query<{ n: number }>(
+          "SELECT count(*)::int n FROM lotto_migrations.versions",
+        )
+      ).rows[0].n,
+      2,
+    );
+    assert.equal(
+      (
+        await db.query<{ regular_from_round: number }>(
+          "SELECT regular_from_round FROM lotto.sync_state",
+        )
+      ).rows[0].regular_from_round,
+      1248,
+    );
+    await assert.rejects(
+      db.query(migrationStatement("002", migrations[1].body + "\n-- changed")),
+      /checksum/,
+    );
   } finally {
     await db.close();
   }
