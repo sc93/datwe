@@ -2,7 +2,7 @@ import "server-only";
 
 import { neon } from "@neondatabase/serverless";
 
-import { checkDatabaseTarget } from "./lotto-archive/admin";
+import { checkDatabaseTarget, databaseTarget } from "./lotto-archive/admin";
 import {
   createArchiveReader,
   createArchiveStore,
@@ -18,8 +18,7 @@ async function connection(
     role === "writer"
       ? process.env.DATABASE_WRITE_URL
       : process.env.DATABASE_READ_URL;
-  const target =
-    process.env.VERCEL_ENV === "production" ? "production" : "isolated";
+  const target = databaseTarget(role, process.env);
   checkDatabaseTarget(raw, target, process.env);
   const sql = neon(raw!, { fetchOptions: { signal } });
   const [permissions] = await sql.query(

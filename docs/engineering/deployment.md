@@ -41,7 +41,7 @@
 | `CRON_SECRET`              | 32자 이상 서버 비밀값. Production에만 주입                      |
 | `LOTTO_ARCHIVE_ENABLED`    | 승인된 Production에서만 `true`                                  |
 
-접속 URL은 TLS(`sslmode=require`)를 요구한다. pooler 접미사를 정규화한 호스트를 대조하고, 개발/Preview의 운영 호스트 연결을 거부한다. 로그인 역할은 일반 SQL로 별도 생성해 필요한 비로그인 그룹만 부여하고 비밀번호는 승인된 비밀 관리 수단으로 설정한다. 런타임은 owner/DDL/역할 생성/Neon 관리자 권한을 가진 자격을 거부한다. reader는 관리 테이블 접근 및 쓰기 권한도 거부한다. 기존 Marketplace owner URL을 런타임 변수에 그대로 재사용하지 않는다. Preview마다 **서로 다른 실제 Neon 브랜치 endpoint**와 격리 자격을 주입해야 하며, 환경변수명만으로 연결 검증 완료라고 간주하지 않는다. Preview의 수집 웹 요청은 격리 DB 여부와 관계없이 거부한다.
+접속 URL은 TLS(`sslmode=require`)를 요구한다. pooler 접미사를 정규화한 호스트를 대조하고, Preview의 운영 호스트 연결과 비운영 writer의 운영 연결을 거부한다. 로컬 reader는 운영과 같은 DB를 읽는 것을 허용하며 별도 격리 DB를 요구하지 않는다. 로그인 역할은 일반 SQL로 별도 생성해 필요한 비로그인 그룹만 부여하고 비밀번호는 승인된 비밀 관리 수단으로 설정한다. 런타임은 owner/DDL/역할 생성/Neon 관리자 권한을 가진 자격을 거부한다. reader는 관리 테이블 접근 및 쓰기 권한도 거부한다. 기존 Marketplace owner URL을 런타임 변수에 그대로 재사용하지 않는다. Preview마다 **서로 다른 실제 Neon 브랜치 endpoint**와 격리 자격을 주입해야 하며, 환경변수명만으로 연결 검증 완료라고 간주하지 않는다. Preview의 수집 웹 요청은 격리 DB 여부와 관계없이 거부한다.
 
 격리 마이그레이션은 `DATABASE_MIGRATION_URL`, `DATABASE_ISOLATED_HOST`, `DATABASE_PRODUCTION_HOST`를 비밀 관리 경로로 주입한 후 실행한다.
 
@@ -66,3 +66,9 @@ npm run archive:migrate -- --apply
 - 이 경로는 기존 관리 API와 동일한 CRON_SECRET·Production·LOTTO_ARCHIVE_ENABLED·쓰기 DB 대상 설정 검사를 거친다. 캐시만 무효화하고 DB 연결·원천 수집·DB 쓰기를 실행하지 않는다. 호출 실패를 적재 실패로 간주하지 말고 갱신만 재시도한다.
 - #36 개발 완료는 운영 전환 승인이 아니다. 승인된 운영 전환 때002 마이그레이션과 DB reader 연결/읽기 권한, 공식 최신 확인 및 최근5회/20회 준비, 공급자 실제 경고 여부를 간단히 확인한다. 운영 SQL과 Cron 활성화·배포는 명시적 승인 범위에서만 수행한다.
 - 배포 전 현재 정상 Vercel 배포 식별자를 비밀값 없이 기록하고 문제 시 이전 배포로 복귀하는 절차를 확보한다. DB 기록은 유지하며 down/DROP이나 실제 롤백 훈련은 하지 않는다. 배포 후 대표 메인·목록·상세·조건 흐름과 실제 원천 요청 부재를 확인한다. 로컬 검증을 운영 연결·사용량 확인 완료로 표시하지 않는다.
+
+## 로컬에서 운영 데이터 조회
+
+개인 사이드프로젝트의 로컬 확인은 운영과 동일한 추첨 기록을 읽는다. git에서 제외되는 `.env.local`에 운영의 `DATABASE_READ_URL`(reader 자격)과 `DATABASE_PRODUCTION_HOST`를 설정한다. 로컬 조회에 `DATABASE_ISOLATED_HOST`는 필요하지 않다. URL/비밀번호는 채팅·로그·커밋에 남기지 않는다.
+
+`VERCEL_ENV=production`으로 위장할 필요는 없다. 로컬 reader의 DB 대상과 캐시 호스트는 자동으로 운영을 사용한다. reader 자격·TLS·대상 호스트 검사는 유지한다. 운영 쓰기 URL·마이그레이션 자격·Cron 비밀값은 로컬 조회에 필요하지 않다. 로컬 관리 수집/캐시 관리 웹 요청은 기존대로 Production 검사에서 거부한다. Preview는 기존 격리 DB를 사용한다.

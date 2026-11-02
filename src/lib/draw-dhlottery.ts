@@ -5,12 +5,13 @@ import { connection } from "next/server";
 
 import { createArchiveDrawReader } from "./archive-draw-reader";
 import type { DrawCache } from "./draw-reader";
+import { databaseTarget } from "./lotto-archive/admin";
 import { drawCacheTags } from "./lotto-cache";
 import { archiveReader } from "./lotto-db";
 
 const readCache: DrawCache = (key, ttl, load) => {
   const target =
-    process.env.VERCEL_ENV === "production"
+    databaseTarget("reader", process.env) === "production"
       ? process.env.DATABASE_PRODUCTION_HOST
       : process.env.DATABASE_ISOLATED_HOST;
   return unstable_cache(

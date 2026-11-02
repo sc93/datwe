@@ -24,7 +24,7 @@
 ## 당첨 회차 데이터
 
 - `src/lib/lotto-data.ts`: 공유 타입, 외부 응답 검증, 조건 사용 가능 여부.
-- `src/lib/archive-draw-reader.ts`는 읽기 전용 DB adapter를 주입해 최근5회·단건·공식 최신·20개 구간·이전5회를 제공한다. `draw-dhlottery.ts`가 Next Data Cache와 `lotto-db.ts`의 reader 자격을 연결한다. 공개 SSR·metadata·API·재시도에는 이 경계만 사용하며 캐시 miss·미수집·DB 장애에도 원천 호출·수집·쓰기를 하지 않는다. 기존 `lotto-reader.ts`와 원천 reader 기본 모드는 이전 계약 검증용으로 남지만 공개 공급자로 연결하지 않는다.
+- `src/lib/archive-draw-reader.ts`는 읽기 전용 DB adapter를 주입해 최근5회·단건·공식 최신·20개 구간·이전5회를 제공한다. `draw-dhlottery.ts`가 Next Data Cache와 `lotto-db.ts`의 reader 자격을 연결한다. 로컬 공개 조회는 운영 DB의 같은 기록을 읽고, Preview 조회와 비운영 writer는 격리 대상을 유지한다. 캐시 호스트도 같은 대상 선택을 사용한다. 공개 SSR·metadata·API·재시도에는 이 경계만 사용하며 캐시 miss·미수집·DB 장애에도 원천 호출·수집·쓰기를 하지 않는다. 기존 `lotto-reader.ts`와 원천 reader 기본 모드는 이전 계약 검증용으로 남지만 공개 공급자로 연결하지 않는다.
 - 회차는 `episode`, `drawDate`(YYYY-MM-DD), 정렬된 본번호6개, `bonus`이며 최신순이다. DB `verified_at`과 공식 최신 view의 `latest_checked_at`을 그대로 사용한다. DB 최대 round나 DB를 읽은 시각으로 공식 최신을 만들지 않는다.
 - 최근 응답은 `fresh`/`partial`/`stale`/`not-collected`/`unavailable`, `checkedAt`, `missingEpisodes`, `validUntil`을 제공한다. `validUntil`은 공식 최신의 다음 추첨 경계이며 최신 미확인 시 null이다. 정상 최신 회차는 5분이 지나도 경계 전까지 사용할 수 있다. 경계 이후에는 기존 번호를 표시하되 최근5회 제외·이월수만 제한한다. 최근5회 제외는 연속5회가 모두 있어야 하고 이월수는 확인된 최신 본번호를 사용한다.
 - `draw-schedule.ts`의 기본 경계는 공식 안내의 토요일20:35경이다. 공식 공지에 따른 일정 변경은 `DRAW_SCHEDULE_EXCEPTIONS`에 회차별 ISO 시각을 기록하며 테스트에 일정을 주입한다. 22시는 수집 목표이지 추첨 경계가 아니다. 공식 최신의 회차·추첨일·추첨 이후 원천 확인시각을 검증하고 다음 경계를 넘겨 유효성을 연장하지 않는다.

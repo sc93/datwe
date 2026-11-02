@@ -132,3 +132,29 @@ test("격리 DB 대상 확인은 운영 호스트·혼합 자격·소유자 자�
     "ep-isolated.example",
   );
 });
+
+test("로컬 reader는 운영 데이터를 읽되 Preview·writer는 격리 대상을 유지한다", async () => {
+  const { databaseTarget } = await import("../src/lib/lotto-archive/admin");
+  assert.equal(databaseTarget("reader", {}), "production");
+  assert.equal(
+    databaseTarget("reader", { VERCEL_ENV: "development" }),
+    "production",
+  );
+  assert.equal(databaseTarget("reader", { VERCEL_ENV: "preview" }), "isolated");
+  assert.equal(databaseTarget("writer", {}), "isolated");
+  assert.equal(
+    databaseTarget("writer", { VERCEL_ENV: "production" }),
+    "production",
+  );
+  const response = await handleSyncRequest(
+    new Request("https://example.com", {
+      headers: { authorization: `Bearer ${env.CRON_SECRET}` },
+    }),
+    "daily",
+    { ...env, VERCEL_ENV: undefined },
+    async () => {
+      throw Error("must not run");
+    },
+  );
+  assert.equal(response.status, 403);
+});
