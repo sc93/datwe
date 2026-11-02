@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
+import { fetchDraw, fetchLatestDraw } from "@/lib/draw-db";
 import { loadDrawDetail } from "@/lib/draw-detail";
-import { fetchDraw, fetchLatestDraw } from "@/lib/draw-dhlottery";
 import { parseRoundInput } from "@/lib/draw-navigation";
 
 export async function GET(

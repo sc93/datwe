@@ -294,12 +294,6 @@ export function DrawListScreen({
               기록이 적재되면 이 구간에서 확인할 수 있어요.
             </Notice>
           )}
-          {data.status === "empty" && (
-            <Notice title="표시할 추첨 기록이 없어요">
-              정상 응답에서 확인된 기록이 0건이에요. 없는 회차라는 뜻은
-              아니에요.
-            </Notice>
-          )}
           {data.status === "unavailable" && (
             <Notice title="당첨번호를 불러오지 못했어요">
               조회에 실패했어요. 없는 회차라는 뜻은 아니에요.
@@ -323,7 +317,7 @@ export function DrawListScreen({
               ) : (
                 <li key={slot.episode}>
                   <Notice
-                    title={`제 ${slot.episode}회 ${slot.status === "not-collected" ? "미수집" : slot.status === "empty" ? "기록 미확인" : "조회 실패"}`}
+                    title={`제 ${slot.episode}회 ${slot.status === "not-collected" ? "미수집" : "조회 실패"}`}
                   >
                     <p>다른 회차는 계속 확인할 수 있어요.</p>
                     <Button
@@ -454,9 +448,7 @@ export function DrawDetailScreen({
               ? "조회 가능한 범위를 벗어났어요"
               : target.status === "not-collected"
                 ? "아직 수집하지 않은 회차예요"
-                : target.status === "empty"
-                  ? "확인된 추첨 기록이 없어요"
-                  : "당첨번호를 불러오지 못했어요"
+                : "당첨번호를 불러오지 못했어요"
           }
         >
           {target.status !== "invalid-range" && (

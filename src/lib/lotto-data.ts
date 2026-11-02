@@ -12,29 +12,21 @@ export type LottoData = {
   checkedAt: string | null;
   missingEpisodes: number[];
   /** DB 조회는 다음 추첨 경계까지 유효하다. null은 공식 최신 미확인이다. */
-  validUntil?: string | null;
+  validUntil: string | null;
 };
 
 export const RECENT_DRAW_COUNT = 5;
-export const DRAW_FRESHNESS_MS = 300_000;
 
 export function getLottoDataAtTime(
   data: LottoData,
   now = Date.now(),
 ): LottoData {
   if (data.status !== "fresh" && data.status !== "partial") return data;
-  if ("validUntil" in data) {
-    const checked = Date.parse(data.checkedAt ?? "");
-    const until = Date.parse(data.validUntil ?? "");
-    return Number.isFinite(checked) && checked <= now && now < until
-      ? data
-      : { ...data, status: "stale" };
-  }
-  // 이전 원천 reader 스냅샷 호환. 공개 DB 응답은 항상 validUntil을 제공한다.
-  const age = now - Date.parse(data.checkedAt ?? "");
-  return !Number.isFinite(age) || age < 0 || age >= DRAW_FRESHNESS_MS
-    ? { ...data, status: "stale" }
-    : data;
+  const checked = Date.parse(data.checkedAt ?? "");
+  const until = Date.parse(data.validUntil ?? "");
+  return Number.isFinite(checked) && checked <= now && now < until
+    ? data
+    : { ...data, status: "stale" };
 }
 
 function record(value: unknown): Record<string, unknown> | null {

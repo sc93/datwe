@@ -103,11 +103,11 @@ test("화면을 오래 열어두면 데이터 의존 조건은 생성을 막고 
   useLottoStore.getState().setDrawData(completeData());
   useLottoStore.getState().setChecked("recent-5-times-not-appeared", true);
   const state = useLottoStore.getState();
-  // 백그라운드 탭의 타이머가 지연돼도 생성 시점에 확인 시각을 다시 검사한다.
+  // 백그라운드 탭의 타이머가 지연돼도 생성 시점에 추첨 경계를 다시 검사한다.
   useLottoStore.setState({
     drawData: {
       ...completeData(),
-      checkedAt: new Date(Date.now() - 301000).toISOString(),
+      validUntil: new Date(Date.now() - 1).toISOString(),
     },
   });
   state.generate();

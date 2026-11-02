@@ -15,8 +15,6 @@ export function createArchiveDrawReader(options: Options) {
   const now = options.now ?? Date.now;
   const reader = createDrawReader({
     cache: options.cache,
-    now,
-    allowStoredLatest: true,
     isFresh: (snapshot, n) =>
       n !== undefined ||
       latestValidity(

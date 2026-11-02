@@ -11,7 +11,7 @@ const slot = (episode: number, found: boolean): DrawResult => ({
   status: found ? "fresh" : "unavailable",
   checkedAt: found ? "2026-10-29T00:00:00.000Z" : null,
   sourceUrl: "https://example.test",
-  failure: found ? null : "network",
+  failure: found ? null : "database",
 });
 const range = (slots: DrawResult[]): DrawRangeResult => ({
   status: "partial",

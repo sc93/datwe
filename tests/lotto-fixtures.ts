@@ -29,6 +29,7 @@ export function draw(episode = 1247): LottoDraw {
 export function completeData(): LottoData {
   return {
     status: "fresh",
+    validUntil: "2026-10-31T11:35:00.000Z",
     latestEpisode: 1247,
     checkedAt: "2026-10-28T00:00:00.000Z",
     missingEpisodes: [],

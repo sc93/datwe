@@ -53,6 +53,7 @@ test("부분 누락은 확인된 회차만 표시하고 누락된 최신 회차�
 test("전체 실패에도 재시도·일반 생성 안내를 남기고 번호를 꾸며내지 않는다", () => {
   const html = render({
     status: "unavailable",
+    validUntil: null,
     latestEpisode: null,
     checkedAt: null,
     draws: [],

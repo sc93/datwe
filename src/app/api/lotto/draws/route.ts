@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { fetchDrawRange } from "@/lib/draw-dhlottery";
+import { fetchDrawRange } from "@/lib/draw-db";
 import { type DrawQuery, parseDrawQuery } from "@/lib/draw-navigation";
 
 export async function GET(request: Request) {

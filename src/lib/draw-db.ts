@@ -45,7 +45,7 @@ export async function fetchDrawPrevious(episode: number, signal?: AbortSignal) {
   await connection();
   return reader.readPrevious(episode, { signal });
 }
-export async function fetchRecentDatabaseDraws() {
+export async function fetchRecentDraws() {
   await connection();
   return reader.readRecent();
 }

@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { getDrawAvailability, parseDrawResponse } from "../src/lib/lotto-data";
+import {
+  getDrawAvailability,
+  getLottoDataAtTime,
+  type LottoData,
+  parseDrawResponse,
+} from "../src/lib/lotto-data";
 import { completeData, draw, rawDraw, response } from "./lotto-fixtures";
 
 test("실제 응답 필드에서 회차·날짜·본번호·보너스를 분리한다", () => {
@@ -93,5 +98,19 @@ test("오래된 캐시는 최신 조건에 쓰지 않으며 부분 응답은 확
       draws: [],
     }),
     { recentFive: false, carryOver: false },
+  );
+});
+
+test("유효 경계가 없는 이전 응답은 최근 확인시각만으로 최신 조건을 허용하지 않는다", () => {
+  const data = {
+    status: "fresh",
+    latestEpisode: 1247,
+    checkedAt: "2026-10-28T00:00:00Z",
+    draws: completeData().draws,
+    missingEpisodes: [],
+  } as unknown as LottoData;
+  assert.equal(
+    getLottoDataAtTime(data, Date.parse("2026-10-28T00:00:01Z")).status,
+    "stale",
   );
 });

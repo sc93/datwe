@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { fetchDrawPrevious, fetchLatestDraw } from "@/lib/draw-dhlottery";
+import { fetchDrawPrevious, fetchLatestDraw } from "@/lib/draw-db";
 import { parseRoundInput } from "@/lib/draw-navigation";
 
 export async function GET(

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { cache } from "react";
 
-import { fetchDrawRange } from "@/lib/draw-dhlottery";
+import { fetchDrawRange } from "@/lib/draw-db";
 import { drawListMetadata, invalidDrawMetadata } from "@/lib/draw-metadata";
 import {
   type DrawQuery,

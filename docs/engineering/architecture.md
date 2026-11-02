@@ -4,7 +4,7 @@
 - `src/app/(home)/_components/`: 메인 화면과 조건 UI.
 - `src/app/(home)/_store/lotto-store.ts`: 클라이언트 상태.
 - `src/app/(home)/_lib/lotto-conditions.ts`: 번호 후보 및 생성 규칙.
-- `src/lib/lotto-dhlottery.ts`: 기존 호출명으로 DB 최근5회 조회를 제공하는 경계.
+- `src/lib/draw-db.ts`: 최근5회·단건·구간·이전5회 공개 DB 조회와 Next 캐시 연결.
 - `src/app/api/lotto/`: 회차 API.
 - `src/components/ui/`: 공통 UI 기본 요소.
 - `src/app/globals.css`: 공통 스타일과 토큰.
@@ -24,7 +24,7 @@
 ## 당첨 회차 데이터
 
 - `src/lib/lotto-data.ts`: 공유 타입, 외부 응답 검증, 조건 사용 가능 여부.
-- `src/lib/archive-draw-reader.ts`는 읽기 전용 DB adapter를 주입해 최근5회·단건·공식 최신·20개 구간·이전5회를 제공한다. `draw-dhlottery.ts`가 Next Data Cache와 `lotto-db.ts`의 reader 자격을 연결한다. 로컬 공개 조회는 운영 DB의 같은 기록을 읽고, Preview 조회와 비운영 writer는 격리 대상을 유지한다. 캐시 호스트도 같은 대상 선택을 사용한다. 공개 SSR·metadata·API·재시도에는 이 경계만 사용하며 캐시 miss·미수집·DB 장애에도 원천 호출·수집·쓰기를 하지 않는다. 기존 `lotto-reader.ts`와 원천 reader 기본 모드는 이전 계약 검증용으로 남지만 공개 공급자로 연결하지 않는다.
+- `src/lib/archive-draw-reader.ts`는 읽기 전용 DB adapter를 주입해 최근5회·단건·공식 최신·20개 구간·이전5회를 제공한다. `draw-db.ts`가 Next Data Cache와 `lotto-db.ts`의 reader 자격을 연결한다. 로컬 공개 조회는 운영 DB의 같은 기록을 읽고, Preview 조회와 비운영 writer는 격리 대상을 유지한다. 캐시 호스트도 같은 대상 선택을 사용한다. 공개 SSR·metadata·API·재시도에는 이 경계만 사용하며 캐시 miss·미수집·DB 장애에도 원천 호출·수집·쓰기를 하지 않는다. 원천 HTTP 조회는 관리 수집의 `lotto-archive/source.ts`에서만 수행하며 공개 reader에는 HTTP 모드와 fallback이 없다.
 - 회차는 `episode`, `drawDate`(YYYY-MM-DD), 정렬된 본번호6개, `bonus`이며 최신순이다. DB `verified_at`과 공식 최신 view의 `latest_checked_at`을 그대로 사용한다. DB 최대 round나 DB를 읽은 시각으로 공식 최신을 만들지 않는다.
 - 최근 응답은 `fresh`/`partial`/`stale`/`not-collected`/`unavailable`, `checkedAt`, `missingEpisodes`, `validUntil`을 제공한다. `validUntil`은 공식 최신의 다음 추첨 경계이며 최신 미확인 시 null이다. 정상 최신 회차는 5분이 지나도 경계 전까지 사용할 수 있다. 경계 이후에는 기존 번호를 표시하되 최근5회 제외·이월수만 제한한다. 최근5회 제외는 연속5회가 모두 있어야 하고 이월수는 확인된 최신 본번호를 사용한다.
 - `draw-schedule.ts`의 기본 경계는 공식 안내의 토요일20:35경이다. 공식 공지에 따른 일정 변경은 `DRAW_SCHEDULE_EXCEPTIONS`에 회차별 ISO 시각을 기록하며 테스트에 일정을 주입한다. 22시는 수집 목표이지 추첨 경계가 아니다. 공식 최신의 회차·추첨일·추첨 이후 원천 확인시각을 검증하고 다음 경계를 넘겨 유효성을 연장하지 않는다.
@@ -33,11 +33,11 @@
 
 ## 과거 회차 조회 경계
 
-- `src/lib/draw-reader.ts`: 주입한 DB/캐시 스냅샷을 공유하며 생성기의 최근5회 조회와 독립된 단건(`readDraw`), 최신 확인(`readLatest`), 최대20개 구간(`readRange`), 대상 이전 최대5회(`readPrevious`) 조회. 네트워크·시계·캐시를 주입할 수 있다. `src/lib/draw-dhlottery.ts`의 `fetchDraw`/`fetchDrawRange`/`fetchDrawPrevious`가 서버에서 Next Data Cache를 연결한다. `/draw` 및 `/draw/[round]`와 `/api/lotto/draws` 계열 API에 연결한다.
+- `src/lib/draw-reader.ts`: 주입한 DB/캐시 스냅샷을 공유하며 생성기의 최근5회 조회와 독립된 단건(`readDraw`), 최신 확인(`readLatest`), 최대20개 구간(`readRange`), 대상 이전 최대5회(`readPrevious`) 조회. DB 스냅샷 로더·최신성 판정·캐시를 주입할 수 있다. `src/lib/draw-db.ts`의 `fetchDraw`/`fetchDrawRange`/`fetchDrawPrevious`가 서버에서 Next Data Cache를 연결한다. `/draw` 및 `/draw/[round]`와 `/api/lotto/draws` 계열 API에 연결한다.
 - 구간은 `to`부터 `max(1,to-19)`까지 최신순 슬롯을 유지한다. 누락을 다른 회차로 채우지 않으며 `missingEpisodes`로 보고한다. 목록 조회는 분석용 이전5회를 추가 요청하지 않는다. 상세 대상과 이전 기록은 독립 호출·재시도할 수 있고 같은 회차의 진행 중 요청은 공유한다.
-- 단건은 양의 안전한 정수만 받는다. 구간은 정상 최신 확인값이 있을 때 상한을 검사하고, 기본 최신 구간은 최신 확인이 불가능하면 `latest-unknown`이다. 명시된 과거 구간/단건은 최신 상한을 몰라도 원천에서 확인할 수 있다. 단건 함수 자체는 최신 상한을 추가 조회하지 않으므로 검색의 확인된 상한 검사는 호출 경계에서 수행한다.
-- 슬롯은 `fresh`/`stale`/`not-collected`/`empty`/`unavailable`/`invalid-range`/`cancelled`, `not-collected`는 DB 미수집이며 DB 장애 `unavailable`과 구분한다. 구간은 추가로 `partial`/`latest-unknown`/`insufficient-history`를 구분한다. `empty`는 정상 형태의 빈 원천 응답이며 회차가 존재하지 않는다는 뜻이 아니다. `checkedAt`과 `sourceUrl`은 슬롯별로 유지한다. 초기 회차의 이전5회 부족은 `insufficient-history`이며 존재하는 이전 슬롯은 별도로 사용할 수 있다.
-- DB 조회 동시성은 reader 인스턴스에서 최대3개이며 DB 연결에는5초 AbortSignal을 적용한다. 전역·다중 인스턴스 호출 한도를 보장하는 방식은 아니다. 소비자의 `AbortSignal` 취소는 공유 원천 조회를 중단하지 않고 해당 소비자에게 `cancelled`를 반환한다. 취소 이후 미시작 구간 슬롯은 추가 요청하지 않는다. UI는 취소 결과를 새 정상 결과로 적용하지 않아야 한다.
+- 단건은 양의 안전한 정수만 받는다. 구간은 정상 최신 확인값이 있을 때 상한을 검사하고, 기본 최신 구간은 최신 확인이 불가능하면 `latest-unknown`이다. 명시된 과거 구간/단건은 최신 상한을 몰라도 DB에서 조회할 수 있다. 단건 함수 자체는 최신 상한을 추가 조회하지 않으므로 검색의 확인된 상한 검사는 호출 경계에서 수행한다.
+- 슬롯은 `fresh`/`stale`/`not-collected`/`unavailable`/`invalid-range`/`cancelled`, `not-collected`는 DB 미수집이며 DB 장애 `unavailable`과 구분한다. 구간은 추가로 `partial`/`latest-unknown`/`insufficient-history`를 구분한다. `checkedAt`과 `sourceUrl`은 슬롯별로 유지한다. 초기 회차의 이전5회 부족은 `insufficient-history`이며 존재하는 이전 슬롯은 별도로 사용할 수 있다.
+- DB 조회 동시성은 reader 인스턴스에서 최대3개이며 DB 연결에는5초 AbortSignal을 적용한다. 전역·다중 인스턴스 호출 한도를 보장하는 방식은 아니다. 소비자의 `AbortSignal` 취소는 공유 DB 조회를 중단하지 않고 해당 소비자에게 `cancelled`를 반환한다. 취소 이후 미시작 구간 슬롯은 추가 요청하지 않는다. UI는 취소 결과를 새 정상 결과로 적용하지 않아야 한다.
 - 캐시는 정상 검증된 DB 스냅샷만 저장한다. 최신 포인터 재검증300초, 회차86400초이며 생성 조건의 유효기간과 별개다. 키는 `lotto-db-record-v1`+DB 대상 호스트+latest/회차다. 최신 캐시는 `lotto-db-latest`·`lotto-db-list`, 회차 캐시는 `lotto-db-round-N` 태그를 사용한다. 실패·미수집은 throw하여 정상 캐시를 덮지 않는다. 검증된 과거 기록은 시간 경과만으로 무효가 되지 않는다. 추첨 경계가 지난 최신 포인터도 과거 목록의 시작점으로 쓸 수 있지만 검색의 공식 최신 상한으로 사용하지 않는다.
 
 ## 본번호 공통 규칙과 과거 분석
