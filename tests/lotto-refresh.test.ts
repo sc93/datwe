@@ -45,3 +45,37 @@ test("재확인 실패·잘못된 응답은 정상 기록과 원천 확인시각
   assert.equal(data.checkedAt, original.checkedAt);
   assert.deepEqual(data.draws, original.draws);
 });
+
+test("SSR 장애와 부분 재조회는 기존 정상 회차를 보존하고 추첨 경계를 재검사한다", async () => {
+  const { mergeRecentData } = await import("../src/lib/refresh/lotto-refresh");
+  const original = completeData();
+  const afterBoundary = Date.parse("2026-10-31T12:00:00Z");
+  const failed = mergeRecentData(
+    original,
+    {
+      status: "unavailable",
+      latestEpisode: null,
+      draws: [],
+      checkedAt: null,
+      missingEpisodes: [],
+      validUntil: null,
+    },
+    afterBoundary,
+  );
+  assert.equal(failed.status, "stale");
+  assert.equal(failed.checkedAt, original.checkedAt);
+  assert.deepEqual(failed.draws, original.draws);
+  const partial = mergeRecentData(
+    original,
+    {
+      ...original,
+      status: "partial",
+      draws: original.draws.slice(0, 2),
+      missingEpisodes: original.draws.slice(2).map((d) => d.episode),
+    },
+    Date.parse("2026-10-29T00:00:00Z"),
+  );
+  assert.deepEqual(partial.draws, original.draws);
+  assert.deepEqual(partial.missingEpisodes, []);
+  assert.equal(partial.status, "fresh");
+});

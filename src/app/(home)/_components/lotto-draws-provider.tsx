@@ -3,7 +3,10 @@
 import { useEffect } from "react";
 
 import { getLottoDataAtTime, type LottoData } from "@/lib/lotto/lotto-data";
-import { RECENT_RECHECK_MS } from "@/lib/refresh/lotto-refresh";
+import {
+  mergeRecentData,
+  RECENT_RECHECK_MS,
+} from "@/lib/refresh/lotto-refresh";
 
 import { useLottoStore } from "../_store/lotto-store";
 
@@ -14,7 +17,7 @@ export default function LottoDrawsProvider({ data, children }: Props) {
   const refresh = useLottoStore((s) => s.refreshDrawData);
   const validUntil = useLottoStore((s) => s.drawData?.validUntil);
   useEffect(() => {
-    setDrawData(getLottoDataAtTime(data));
+    setDrawData(mergeRecentData(useLottoStore.getState().drawData, data));
   }, [data, setDrawData]);
   useEffect(() => {
     const sync = () => {
