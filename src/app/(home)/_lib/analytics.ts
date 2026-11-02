@@ -1,4 +1,7 @@
-import { analyticsEnabled, analyticsPage } from "@/lib/analytics-page";
+import {
+  analyticsEnabled,
+  analyticsPage,
+} from "@/lib/analytics/analytics-page";
 
 import { LOTTO_OPTION_IDS, type LottoOptionId } from "./lotto-conditions";
 

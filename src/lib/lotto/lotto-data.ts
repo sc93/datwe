@@ -6,25 +6,27 @@ export type LottoDraw = {
 };
 
 export type LottoData = {
-  status: "fresh" | "stale" | "partial" | "unavailable";
+  status: "fresh" | "stale" | "partial" | "not-collected" | "unavailable";
   latestEpisode: number | null;
   draws: LottoDraw[];
   checkedAt: string | null;
   missingEpisodes: number[];
+  /** DB 조회는 다음 추첨 경계까지 유효하다. null은 공식 최신 미확인이다. */
+  validUntil: string | null;
 };
 
 export const RECENT_DRAW_COUNT = 5;
-export const DRAW_FRESHNESS_MS = 300_000;
 
 export function getLottoDataAtTime(
   data: LottoData,
   now = Date.now(),
 ): LottoData {
   if (data.status !== "fresh" && data.status !== "partial") return data;
-  const age = now - Date.parse(data.checkedAt ?? "");
-  return !Number.isFinite(age) || age < 0 || age >= DRAW_FRESHNESS_MS
-    ? { ...data, status: "stale" }
-    : data;
+  const checked = Date.parse(data.checkedAt ?? "");
+  const until = Date.parse(data.validUntil ?? "");
+  return Number.isFinite(checked) && checked <= now && now < until
+    ? data
+    : { ...data, status: "stale" };
 }
 
 function record(value: unknown): Record<string, unknown> | null {
@@ -112,4 +114,53 @@ export function getDrawAvailability(data: LottoData) {
       data.latestEpisode !== null &&
       data.draws.some((draw) => draw.episode === data.latestEpisode),
   };
+}
+
+/** DATWE API 재확인 응답의 최소 계약. 손상 응답으로 정상 스토어를 덮지 않는다. */
+export function parseRecentDatabaseData(value: unknown): LottoData | null {
+  const data = record(value);
+  if (
+    !data ||
+    !["fresh", "stale", "partial", "not-collected", "unavailable"].includes(
+      String(data.status),
+    ) ||
+    !Array.isArray(data.draws) ||
+    !Array.isArray(data.missingEpisodes) ||
+    !(data.latestEpisode === null || isEpisode(data.latestEpisode)) ||
+    !(
+      data.checkedAt === null ||
+      (typeof data.checkedAt === "string" &&
+        Number.isFinite(Date.parse(data.checkedAt)))
+    ) ||
+    !(
+      data.validUntil === null ||
+      (typeof data.validUntil === "string" &&
+        Number.isFinite(Date.parse(data.validUntil)))
+    ) ||
+    !data.missingEpisodes.every(isEpisode)
+  )
+    return null;
+  for (const value of data.draws) {
+    const draw = record(value);
+    if (
+      !draw ||
+      !isEpisode(draw.episode) ||
+      typeof draw.drawDate !== "string" ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(draw.drawDate) ||
+      parseDate(draw.drawDate.replaceAll("-", "")) !== draw.drawDate ||
+      !Array.isArray(draw.numbers) ||
+      draw.numbers.length !== 6 ||
+      !draw.numbers.every(isNumber) ||
+      new Set(draw.numbers).size !== 6 ||
+      !isNumber(draw.bonus) ||
+      draw.numbers.includes(draw.bonus)
+    )
+      return null;
+  }
+  if (
+    new Set(data.draws.map((draw) => record(draw)!.episode)).size !==
+    data.draws.length
+  )
+    return null;
+  return data as unknown as LottoData;
 }

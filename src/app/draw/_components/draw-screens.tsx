@@ -8,11 +8,18 @@ import { type ReactNode, useEffect, useRef, useState } from "react";
 import { trackLottoEvent } from "@/app/(home)/_lib/analytics";
 import { DrawNumbers } from "@/components/draw-numbers";
 import { Button } from "@/components/ui/button";
-import type { DrawDetailData } from "@/lib/draw-detail";
-import { drawHref, listHref, parseRoundInput } from "@/lib/draw-navigation";
-import type { DrawRangeResult, DrawResult } from "@/lib/draw-reader";
-import { mergeDrawRange } from "@/lib/draw-refresh";
-import { consumeSearchVisit, expectSearchVisit } from "@/lib/draw-visit";
+import {
+  consumeSearchVisit,
+  expectSearchVisit,
+} from "@/lib/analytics/draw-visit";
+import type { DrawDetailData } from "@/lib/draw/draw-detail";
+import {
+  drawHref,
+  listHref,
+  parseRoundInput,
+} from "@/lib/draw/draw-navigation";
+import { mergeDrawRange } from "@/lib/refresh/draw-refresh";
+import type { DrawRangeResult, DrawResult } from "@/lib/server/draw-reader";
 
 import {
   AnalysisPanel,
@@ -254,11 +261,13 @@ export function DrawListScreen({
       </p>
       <Search latest={latest} to={to} query={query} setQuery={setQuery} />
       {error && <Notice title={error} />}
-      {latest === null && data.status !== "latest-unknown" && (
-        <Notice title="최신 회차를 확인하지 못했어요">
-          아래는 조회한 과거 기록이에요. 최신 상한은 확인되지 않았어요.
-        </Notice>
-      )}
+      {latest === null &&
+        !data.latest?.draw &&
+        data.status !== "latest-unknown" && (
+          <Notice title="최신 회차를 확인하지 못했어요">
+            아래는 조회한 과거 기록이에요. 최신 상한은 확인되지 않았어요.
+          </Notice>
+        )}
       {data.status === "invalid-range" ? (
         <Notice title="조회 가능한 범위를 벗어났어요">
           <Link
@@ -287,10 +296,9 @@ export function DrawListScreen({
             </span>
           </div>
           <RangeNavigation to={data.to} latest={latest} />
-          {data.status === "empty" && (
-            <Notice title="표시할 추첨 기록이 없어요">
-              정상 응답에서 확인된 기록이 0건이에요. 없는 회차라는 뜻은
-              아니에요.
+          {data.status === "not-collected" && (
+            <Notice title="아직 수집하지 않은 구간이에요">
+              기록이 적재되면 이 구간에서 확인할 수 있어요.
             </Notice>
           )}
           {data.status === "unavailable" && (
@@ -316,7 +324,7 @@ export function DrawListScreen({
               ) : (
                 <li key={slot.episode}>
                   <Notice
-                    title={`제 ${slot.episode}회 ${slot.status === "empty" ? "기록 미확인" : "조회 실패"}`}
+                    title={`제 ${slot.episode}회 ${slot.status === "not-collected" ? "미수집" : "조회 실패"}`}
                   >
                     <p>다른 회차는 계속 확인할 수 있어요.</p>
                     <Button
@@ -408,7 +416,7 @@ export function DrawDetailScreen({
         confirmedEpisode={target.draw ? episode : undefined}
       />
       {error && <Notice title={error} />}
-      {latest === null && (
+      {latest === null && !data.latest.draw && (
         <Notice title="최신 상한 미확인">
           과거 회차는 별도로 조회할 수 있어요.
         </Notice>
@@ -445,8 +453,8 @@ export function DrawDetailScreen({
           title={
             target.status === "invalid-range"
               ? "조회 가능한 범위를 벗어났어요"
-              : target.status === "empty"
-                ? "확인된 추첨 기록이 없어요"
+              : target.status === "not-collected"
+                ? "아직 수집하지 않은 회차예요"
                 : "당첨번호를 불러오지 못했어요"
           }
         >

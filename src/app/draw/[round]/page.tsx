@@ -1,15 +1,18 @@
 import type { Metadata } from "next";
 import { cache } from "react";
 
-import { loadDrawDetail } from "@/lib/draw-detail";
-import { fetchDraw, fetchLatestDraw } from "@/lib/draw-dhlottery";
-import { drawDetailMetadata, invalidDrawMetadata } from "@/lib/draw-metadata";
+import { loadDrawDetail } from "@/lib/draw/draw-detail";
+import {
+  drawDetailMetadata,
+  invalidDrawMetadata,
+} from "@/lib/draw/draw-metadata";
 import {
   drawHref,
   type DrawQuery,
   parseDrawQuery,
   parseRoundInput,
-} from "@/lib/draw-navigation";
+} from "@/lib/draw/draw-navigation";
+import { fetchDraw, fetchLatestDraw } from "@/lib/server/draw-db";
 
 import {
   DrawDetailScreen,

@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { consumeSearchVisit, expectSearchVisit } from "../src/lib/draw-visit";
+import {
+  consumeSearchVisit,
+  expectSearchVisit,
+} from "../src/lib/analytics/draw-visit";
 test("현재 정상 상세의 재검색은 즉시 완료하며 다음 방문에 이월하지 않는다", () => {
   assert.equal(expectSearchVisit(600, 600), true);
   assert.equal(consumeSearchVisit(600), false);

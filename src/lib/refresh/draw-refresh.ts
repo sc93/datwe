@@ -1,4 +1,4 @@
-import type { DrawRangeResult } from "./draw-reader";
+import type { DrawRangeResult } from "../server/draw-reader";
 
 /** 같은 구간에서 재조회에 실패한 회차는 마지막 정상 스냅샷을 보존한다. */
 export function mergeDrawRange(

@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { loadDrawDetail } from "../src/lib/draw-detail";
-import type { DrawResult } from "../src/lib/draw-reader";
+import { loadDrawDetail } from "../src/lib/draw/draw-detail";
+import type { DrawResult } from "../src/lib/server/draw-reader";
 import { draw } from "./lotto-fixtures";
 
 const latest: DrawResult = {

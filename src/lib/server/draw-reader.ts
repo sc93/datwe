@@ -1,4 +1,4 @@
-import { type LottoDraw, parseDrawResponse } from "./lotto-data";
+import type { LottoDraw } from "../lotto/lotto-data";
 
 export const DRAW_ENDPOINT =
   "https://www.dhlottery.co.kr/lt645/selectPstLt645Info.do";
@@ -6,34 +6,38 @@ export const DRAW_PAGE_SIZE = 20;
 export const LATEST_DRAW_TTL_SECONDS = 300;
 export const PAST_DRAW_TTL_SECONDS = 86_400;
 
-type Snapshot = { draw: LottoDraw; checkedAt: string; sourceUrl: string };
+export type DrawSnapshot = {
+  draw: LottoDraw;
+  checkedAt: string;
+  sourceUrl: string;
+};
 /** 캐시는 정상 스냅샷만 저장한다. load의 실패는 기존 정상 값을 교체하지 않는다. */
 export type DrawCache = (
   key: string,
   ttlSeconds: number,
-  load: () => Promise<Snapshot>,
-) => Promise<Snapshot>;
+  load: () => Promise<DrawSnapshot>,
+) => Promise<DrawSnapshot>;
 
 export type DrawResult = {
   episode: number | null;
   status:
     | "fresh"
     | "stale"
-    | "empty"
+    | "not-collected"
     | "unavailable"
     | "invalid-range"
     | "cancelled";
   draw: LottoDraw | null;
   checkedAt: string | null;
   sourceUrl: string;
-  failure: "http" | "network" | "timeout" | "invalid-response" | null;
+  failure: "database" | null;
 };
 export type DrawRangeResult = {
   status:
     | "fresh"
     | "stale"
     | "partial"
-    | "empty"
+    | "not-collected"
     | "unavailable"
     | "invalid-range"
     | "latest-unknown"
@@ -47,15 +51,14 @@ export type DrawRangeResult = {
 };
 type RequestOptions = { signal?: AbortSignal };
 type ReaderOptions = {
-  fetcher?: typeof fetch;
+  loadSnapshot: (episode?: number) => Promise<DrawSnapshot | null>;
+  isFresh: (snapshot: DrawSnapshot, episode?: number) => boolean;
   cache?: DrawCache;
-  now?: () => number;
-  timeoutMs?: number;
 };
 
-class SourceError extends Error {
+class SnapshotError extends Error {
   constructor(public readonly result: DrawResult) {
-    super("당첨 회차 원천을 확인하지 못했습니다.");
+    super("당첨 회차 기록을 확인하지 못했습니다.");
   }
 }
 const validEpisode = (n: number) => Number.isSafeInteger(n) && n > 0;
@@ -77,12 +80,10 @@ function failureResult(
 }
 
 /** 메모리에는 진행 중 요청만 보관한다. 정상 데이터의 보존은 주입한 캐시가 담당한다. */
-export function createDrawReader(options: ReaderOptions = {}) {
-  const fetcher = options.fetcher ?? fetch;
-  const now = options.now ?? Date.now;
+export function createDrawReader(options: ReaderOptions) {
   const cache: DrawCache = options.cache ?? ((_key, _ttl, load) => load());
   const inFlight = new Map<string, Promise<DrawResult>>();
-  const sourceInFlight = new Map<string, Promise<Snapshot>>();
+  const loadInFlight = new Map<string, Promise<DrawSnapshot>>();
   const waiters: Array<() => void> = [];
   let active = 0;
 
@@ -99,63 +100,25 @@ export function createDrawReader(options: ReaderOptions = {}) {
     }
   }
 
-  function loadSource(n?: number): Promise<Snapshot> {
+  function loadSnapshot(n?: number): Promise<DrawSnapshot> {
     const key = n === undefined ? "latest" : String(n);
-    const existing = sourceInFlight.get(key);
+    const existing = loadInFlight.get(key);
     if (existing) return existing;
     const pending = limited(async () => {
-      const signal = AbortSignal.timeout(options.timeoutMs ?? 5000);
       try {
-        const res = await fetcher(sourceUrl(n), {
-          method: "GET",
-          cache: "no-store",
-          signal,
-          headers: { Accept: "application/json" },
-        });
-        if (!res.ok)
-          throw new SourceError(failureResult(n, "unavailable", "http"));
-        const payload: unknown = await res.json();
-        // 현재 공식 정상 응답의 resultCode는 null이다. 다른 코드를 성공으로 추정하지 않는다.
-        if (
-          payload !== null &&
-          typeof payload === "object" &&
-          "resultCode" in payload &&
-          payload.resultCode !== null
-        ) {
-          throw new SourceError(
-            failureResult(n, "unavailable", "invalid-response"),
-          );
-        }
-        const checkedAt = new Date(now()).toISOString();
-        const draw = parseDrawResponse(payload, n);
-        if (!draw) {
-          const list = (payload as { data?: { list?: unknown } } | null)?.data
-            ?.list;
-          if (Array.isArray(list) && list.length === 0) {
-            throw new SourceError(failureResult(n, "empty", null, checkedAt));
-          }
-          throw new SourceError(
-            failureResult(n, "unavailable", "invalid-response"),
-          );
-        }
-        return { draw, checkedAt, sourceUrl: sourceUrl(n) };
+        const snapshot = await options.loadSnapshot(n);
+        if (!snapshot)
+          throw new SnapshotError(failureResult(n, "not-collected"));
+        return snapshot;
       } catch (error) {
-        if (signal.aborted)
-          throw new SourceError(failureResult(n, "unavailable", "timeout"));
-        if (error instanceof SourceError) throw error;
-        throw new SourceError(
-          failureResult(
-            n,
-            "unavailable",
-            error instanceof SyntaxError ? "invalid-response" : "network",
-          ),
-        );
+        if (error instanceof SnapshotError) throw error;
+        throw new SnapshotError(failureResult(n, "unavailable", "database"));
       }
     });
-    sourceInFlight.set(key, pending);
+    loadInFlight.set(key, pending);
     void pending.then(
-      () => sourceInFlight.delete(key),
-      () => sourceInFlight.delete(key),
+      () => loadInFlight.delete(key),
+      () => loadInFlight.delete(key),
     );
     return pending;
   }
@@ -175,30 +138,26 @@ export function createDrawReader(options: ReaderOptions = {}) {
         n === undefined ? LATEST_DRAW_TTL_SECONDS : PAST_DRAW_TTL_SECONDS;
       pending = (async (): Promise<DrawResult> => {
         try {
-          const snapshot = await cache(key, ttl, () => loadSource(n));
-          const age = now() - Date.parse(snapshot.checkedAt);
+          const snapshot = await cache(key, ttl, () => loadSnapshot(n));
           return {
             episode: snapshot.draw.episode,
             draw: snapshot.draw,
             checkedAt: snapshot.checkedAt,
             sourceUrl: snapshot.sourceUrl,
             failure: null,
-            status:
-              Number.isFinite(age) && age >= 0 && age < ttl * 1000
-                ? "fresh"
-                : "stale",
+            status: options.isFresh(snapshot, n) ? "fresh" : "stale",
           };
         } catch (error) {
-          return error instanceof SourceError
+          return error instanceof SnapshotError
             ? error.result
-            : failureResult(n, "unavailable", "network");
+            : failureResult(n, "unavailable", "database");
         }
       })();
       inFlight.set(key, pending);
       void pending.finally(() => inFlight.delete(key));
     }
     if (!request.signal) return pending;
-    // 공유 원천 요청을 중단하지 않고 이 소비자만 취소한다. 이전 결과가 새 화면에 전달되지 않는다.
+    // 공유 DB 조회를 중단하지 않고 이 소비자만 취소한다. 이전 결과가 새 화면에 전달되지 않는다.
     const signal = request.signal;
     return new Promise((resolve) => {
       const abort = () => resolve(failureResult(n, "cancelled"));
@@ -236,8 +195,9 @@ export function createDrawReader(options: ReaderOptions = {}) {
               : "fresh"
             : good.length > 0
               ? "partial"
-              : slots.length > 0 && slots.every((s) => s.status === "empty")
-                ? "empty"
+              : slots.length > 0 &&
+                  slots.every((s) => s.status === "not-collected")
+                ? "not-collected"
                 : "unavailable"),
     };
   }
@@ -281,11 +241,12 @@ export function createDrawReader(options: ReaderOptions = {}) {
       // 오래된 최신 포인터는 현재 상한으로 쓰지 않는다. 명시된 과거 구간은 별도로 조회한다.
       const confirmed =
         latest.status === "fresh" ? latest.draw?.episode : undefined;
-      if (to === undefined && confirmed === undefined)
+      const stored = latest.draw?.episode;
+      if (to === undefined && confirmed === undefined && stored === undefined)
         return rangeResult([], null, null, latest, "latest-unknown");
       if (to !== undefined && confirmed !== undefined && to > confirmed)
         return rangeResult([], null, to, latest, "invalid-range");
-      const upper = to ?? confirmed!;
+      const upper = to ?? confirmed ?? stored!;
       const lower = Math.max(1, upper - DRAW_PAGE_SIZE + 1);
       const episodes = Array.from(
         { length: upper - lower + 1 },

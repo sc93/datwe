@@ -6,7 +6,8 @@ import {
   getDrawAvailability,
   getLottoDataAtTime,
   type LottoData,
-} from "@/lib/lotto-data";
+} from "@/lib/lotto/lotto-data";
+import { createRecentRefresh } from "@/lib/refresh/lotto-refresh";
 
 import { trackLottoEvent } from "../_lib/analytics";
 import {
@@ -44,6 +45,7 @@ type LottoActions = {
   setOddCount: (value: number | null) => void;
   setCarryOverNumber: (value: number | null) => void;
   setDrawData: (data: LottoData) => void;
+  refreshDrawData: () => Promise<void>;
   generate: () => void;
   resetResult: () => void;
   resetOptions: () => void;
@@ -69,6 +71,8 @@ export const useLottoStore = create<LottoState & LottoActions>((set, get) => ({
   salaryDay: null,
   oddCount: null,
   carryOverNumber: null,
+
+  refreshDrawData: () => refreshDrawData(),
 
   setChecked: (id, value) => {
     const data = get().drawData;
@@ -251,3 +255,8 @@ export const useLottoStore = create<LottoState & LottoActions>((set, get) => ({
     });
   },
 }));
+
+const refreshDrawData = createRecentRefresh({
+  get: () => useLottoStore.getState().drawData,
+  set: (data) => useLottoStore.getState().setDrawData(data),
+});

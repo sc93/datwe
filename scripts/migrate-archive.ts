@@ -1,6 +1,6 @@
 import { neon } from "@neondatabase/serverless";
 
-import { checkDatabaseTarget } from "../src/lib/lotto-archive/admin";
+import { checkDatabaseTarget } from "../src/lib/server/lotto-archive/admin";
 import { loadArchiveMigrations, migrationStatement } from "./archive-migration";
 
 async function main() {

@@ -103,11 +103,11 @@ test("화면을 오래 열어두면 데이터 의존 조건은 생성을 막고 
   useLottoStore.getState().setDrawData(completeData());
   useLottoStore.getState().setChecked("recent-5-times-not-appeared", true);
   const state = useLottoStore.getState();
-  // 백그라운드 탭의 타이머가 지연돼도 생성 시점에 확인 시각을 다시 검사한다.
+  // 백그라운드 탭의 타이머가 지연돼도 생성 시점에 추첨 경계를 다시 검사한다.
   useLottoStore.setState({
     drawData: {
       ...completeData(),
-      checkedAt: new Date(Date.now() - 301000).toISOString(),
+      validUntil: new Date(Date.now() - 1).toISOString(),
     },
   });
   state.generate();
@@ -210,4 +210,35 @@ test("완료 이벤트는 생성 성공 후에만 보내고 조건 ID는 신규 
     if (oldEnv.NEXT_PUBLIC_GA_ENHANCED_MEASUREMENT_DISABLED === undefined)
       delete process.env.NEXT_PUBLIC_GA_ENHANCED_MEASUREMENT_DISABLED;
   }
+});
+
+test("DB 최신은5분 뒤에도 사용하고 추첨 경계 뒤에는 선택을 보존하며 의존 조건만 막는다", () => {
+  const until = "2026-10-31T11:35:00Z";
+  const state = useLottoStore.getState();
+  state.setDrawData({
+    ...completeData(),
+    checkedAt: "2026-10-24T13:00:00Z",
+    validUntil: until,
+  });
+  assert.equal(useLottoStore.getState().canUseRecentFive, true);
+  state.setChecked("recent-5-times-not-appeared", true);
+  mock.method(Date, "now", () => Date.parse(until));
+  state.generate();
+  assert.equal(useLottoStore.getState().numbers, null);
+  assert.equal(
+    useLottoStore.getState().checked["recent-5-times-not-appeared"],
+    true,
+  );
+  assert.equal(useLottoStore.getState().canUseCarryOver, false);
+  state.setChecked("recent-5-times-not-appeared", false);
+  state.generate();
+  assert.equal(useLottoStore.getState().numbers?.length, 6);
+  state.setDrawData({
+    ...completeData(),
+    checkedAt: until,
+    validUntil: "2026-11-07T11:35:00Z",
+    latestEpisode: 1248,
+    draws: [draw(1248), ...completeData().draws.slice(0, 4)],
+  });
+  assert.equal(useLottoStore.getState().canUseRecentFive, true);
 });

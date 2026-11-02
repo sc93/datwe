@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 
-import { SITE_ORIGIN } from "./analytics-page";
+import { SITE_ORIGIN } from "../analytics/analytics-page";
+import type { DrawRangeResult } from "../server/draw-reader";
 import type { DrawDetailData } from "./draw-detail";
 import { drawHref, listHref } from "./draw-navigation";
-import type { DrawRangeResult } from "./draw-reader";
 function metadata(
   title: string,
   description: string,

@@ -1,6 +1,17 @@
 import { timingSafeEqual } from "node:crypto";
 
 export type Environment = Record<string, string | undefined>;
+
+/** 로컬 공개 조회는 운영과 같은 기록을 읽는다. Preview와 비운영 writer는 격리한다. */
+export function databaseTarget(
+  role: "reader" | "writer",
+  env: Environment,
+): "production" | "isolated" {
+  if (role === "reader")
+    return env.VERCEL_ENV === "preview" ? "isolated" : "production";
+  return env.VERCEL_ENV === "production" ? "production" : "isolated";
+}
+
 export function checkDatabaseTarget(
   raw: string | undefined,
   target: "production" | "isolated",

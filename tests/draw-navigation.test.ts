@@ -7,7 +7,7 @@ import {
   parseDrawQuery,
   parseRoundInput,
   rangeNavigation,
-} from "../src/lib/draw-navigation";
+} from "../src/lib/draw/draw-navigation";
 
 test("정확 검색은 공백·선행0을 정규화하고 잘못된 입력과 최신 초과를 거부한다", () => {
   assert.deepEqual(parseRoundInput(" 00047 ", 1247), {

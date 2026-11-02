@@ -5,8 +5,8 @@ import {
   type FailureCode,
   type OfficialSource,
   SyncError,
-} from "./lotto-archive/source";
-import type { ArchiveStore, Lease, RunStatus } from "./lotto-archive/store";
+} from "./source";
+import type { ArchiveStore, Lease, RunStatus } from "./store";
 
 export type SyncSummary = {
   status: RunStatus;

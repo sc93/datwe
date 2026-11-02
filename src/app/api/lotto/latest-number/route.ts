@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { fetchRecentDraws } from "@/lib/lotto-dhlottery";
+import { fetchRecentDraws } from "@/lib/server/draw-db";
 
 export async function GET() {
   const result = await fetchRecentDraws();

@@ -2,46 +2,54 @@
 
 import { useEffect } from "react";
 
+import { getLottoDataAtTime, type LottoData } from "@/lib/lotto/lotto-data";
 import {
-  DRAW_FRESHNESS_MS,
-  getLottoDataAtTime,
-  type LottoData,
-} from "@/lib/lotto-data";
+  mergeRecentData,
+  RECENT_RECHECK_MS,
+} from "@/lib/refresh/lotto-refresh";
 
 import { useLottoStore } from "../_store/lotto-store";
 
-type Props = {
-  data: LottoData;
-  children: React.ReactNode;
-};
+type Props = { data: LottoData; children: React.ReactNode };
 
-/**
- * 서버에서 검증한 회차와 조회 상태를 스토어에 전달합니다.
- */
 export default function LottoDrawsProvider({ data, children }: Props) {
   const setDrawData = useLottoStore((s) => s.setDrawData);
-
+  const refresh = useLottoStore((s) => s.refreshDrawData);
+  const validUntil = useLottoStore((s) => s.drawData?.validUntil);
   useEffect(() => {
-    const sync = () => setDrawData(getLottoDataAtTime(data));
-    sync();
-    if (
-      (data.status !== "fresh" && data.status !== "partial") ||
-      !data.checkedAt
-    )
-      return;
-    const delay = Math.max(
-      0,
-      Date.parse(data.checkedAt) + DRAW_FRESHNESS_MS - Date.now(),
-    );
-    const timer = window.setTimeout(sync, delay);
+    setDrawData(mergeRecentData(useLottoStore.getState().drawData, data));
+  }, [data, setDrawData]);
+  useEffect(() => {
+    const sync = () => {
+      const current = useLottoStore.getState().drawData;
+      if (current) setDrawData(getLottoDataAtTime(current));
+      if (document.visibilityState !== "hidden") void refresh();
+    };
+    // 추첨 경계에서는 즉시 제한하고 서버의 새 공식 최신을 재확인한다.
+    const boundary = Date.parse(validUntil ?? "");
+    const timer =
+      Number.isFinite(boundary) && boundary > Date.now()
+        ? window.setTimeout(sync, Math.min(boundary - Date.now(), 2147483647))
+        : undefined;
+    const interval = window.setInterval(() => {
+      const current = useLottoStore.getState().drawData;
+      if (
+        !current ||
+        getLottoDataAtTime(current).status === "stale" ||
+        current.status === "unavailable" ||
+        current.status === "not-collected" ||
+        current.status === "partial"
+      )
+        sync();
+    }, RECENT_RECHECK_MS);
     window.addEventListener("focus", sync);
     document.addEventListener("visibilitychange", sync);
     return () => {
       window.clearTimeout(timer);
+      window.clearInterval(interval);
       window.removeEventListener("focus", sync);
       document.removeEventListener("visibilitychange", sync);
     };
-  }, [data, setDrawData]);
-
+  }, [validUntil, setDrawData, refresh]);
   return <>{children}</>;
 }

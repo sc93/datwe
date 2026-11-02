@@ -28,7 +28,8 @@ export default function CarryOverOption() {
   const lastDraw =
     recentDraws.length > 0 ? recentDraws[recentDraws.length - 1] : [];
 
-  const handleSelect = (n: number) => {
+  const handleSelect = async (n: number) => {
+    await useLottoStore.getState().refreshDrawData();
     setCarryOverNumber(n);
     setChecked(id, true);
     setOpen(false);
@@ -41,12 +42,20 @@ export default function CarryOverOption() {
         id={id}
         label={label}
         checked={checked}
-        onCheckedChange={(v) => setChecked(id, v)}
+        onCheckedChange={async (v) => {
+          if (v) await useLottoStore.getState().refreshDrawData();
+          setChecked(id, v);
+        }}
         opensDialog
-        onOpenDialog={() => setOpen(true)}
+        onOpenDialog={async () => {
+          await useLottoStore.getState().refreshDrawData();
+          setOpen(true);
+        }}
         valueLabel={
           !available
-            ? "직전 회차 확인 필요"
+            ? checked
+              ? "최신 회차 확인 필요 · 해제 가능"
+              : "최신 회차 확인 필요"
             : carryOverNumber != null
               ? `직전 회차 번호 ${carryOverNumber}`
               : null
@@ -84,7 +93,8 @@ export default function CarryOverOption() {
           {available && (
             <Button
               variant="outline"
-              onClick={() => {
+              onClick={async () => {
+                await useLottoStore.getState().refreshDrawData();
                 setCarryOverNumber(null);
                 setChecked(id, true);
                 setOpen(false);

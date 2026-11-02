@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 
-import type { LottoData } from "@/lib/lotto-data";
+import type { LottoData } from "@/lib/lotto/lotto-data";
 
 import { useLottoStore } from "../_store/lotto-store";
 import { RecentDrawsView } from "./recent-draws-view";

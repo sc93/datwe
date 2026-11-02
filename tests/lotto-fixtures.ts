@@ -1,4 +1,4 @@
-import type { LottoData, LottoDraw } from "../src/lib/lotto-data";
+import type { LottoData, LottoDraw } from "../src/lib/lotto/lotto-data";
 
 export function rawDraw(episode = 1247) {
   const date = new Date(Date.UTC(2026, 9, 24 - (1247 - episode) * 7));
@@ -29,6 +29,7 @@ export function draw(episode = 1247): LottoDraw {
 export function completeData(): LottoData {
   return {
     status: "fresh",
+    validUntil: "2026-10-31T11:35:00.000Z",
     latestEpisode: 1247,
     checkedAt: "2026-10-28T00:00:00.000Z",
     missingEpisodes: [],

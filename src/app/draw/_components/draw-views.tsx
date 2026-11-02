@@ -5,13 +5,17 @@ import type { ReactNode } from "react";
 import { DrawNumbers } from "@/components/draw-numbers";
 import { Button } from "@/components/ui/button";
 import {
+  drawHref,
+  listHref,
+  rangeNavigation,
+} from "@/lib/draw/draw-navigation";
+import {
   type AnalysisItem,
   analyzeDraw,
   summarizeDraw,
-} from "@/lib/draw-analysis";
-import { drawHref, listHref, rangeNavigation } from "@/lib/draw-navigation";
-import type { DrawRangeResult } from "@/lib/draw-reader";
-import type { LottoDraw } from "@/lib/lotto-data";
+} from "@/lib/lotto/draw-analysis";
+import type { LottoDraw } from "@/lib/lotto/lotto-data";
+import type { DrawRangeResult } from "@/lib/server/draw-reader";
 
 export const OFFICIAL_RESULT_URL = "https://www.dhlottery.co.kr/lt645/result";
 export const dateLabel = (date: string) => `${date.replaceAll("-", ". ")}.`;

@@ -1,4 +1,4 @@
-import { DRAW_ENDPOINT, type DrawResult } from "./draw-reader";
+import { DRAW_ENDPOINT, type DrawResult } from "../server/draw-reader";
 
 export type DrawDetailData = { target: DrawResult; latest: DrawResult };
 export async function loadDrawDetail(
