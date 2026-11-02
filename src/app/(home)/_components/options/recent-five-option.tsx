@@ -15,9 +15,18 @@ export default function RecentFiveOption() {
       id={id}
       label={label}
       checked={checked}
-      onCheckedChange={(v) => setChecked(id, v)}
+      onCheckedChange={async (v) => {
+        if (v) await useLottoStore.getState().refreshDrawData();
+        setChecked(id, v);
+      }}
       disabled={!available && !checked}
-      valueLabel={!available ? "연속 5회 확인 필요" : null}
+      valueLabel={
+        !available
+          ? checked
+            ? "기록 확인 필요 · 해제 가능"
+            : "최신 연속 5회 확인 필요"
+          : null
+      }
     />
   );
 }

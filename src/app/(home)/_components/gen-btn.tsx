@@ -20,7 +20,13 @@ export default function GenBtn() {
       <Button
         size="lg"
         className="relative h-14 w-full rounded-xl text-base font-semibold"
-        onClick={() => {
+        onClick={async () => {
+          const state = useLottoStore.getState();
+          if (
+            state.checked["recent-5-times-not-appeared"] ||
+            state.checked["carry-over-one"]
+          )
+            await state.refreshDrawData();
           generate();
           if (!useLottoStore.getState().numbers) return;
           requestAnimationFrame(() => {

@@ -211,3 +211,34 @@ test("완료 이벤트는 생성 성공 후에만 보내고 조건 ID는 신규 
       delete process.env.NEXT_PUBLIC_GA_ENHANCED_MEASUREMENT_DISABLED;
   }
 });
+
+test("DB 최신은5분 뒤에도 사용하고 추첨 경계 뒤에는 선택을 보존하며 의존 조건만 막는다", () => {
+  const until = "2026-10-31T11:35:00Z";
+  const state = useLottoStore.getState();
+  state.setDrawData({
+    ...completeData(),
+    checkedAt: "2026-10-24T13:00:00Z",
+    validUntil: until,
+  });
+  assert.equal(useLottoStore.getState().canUseRecentFive, true);
+  state.setChecked("recent-5-times-not-appeared", true);
+  mock.method(Date, "now", () => Date.parse(until));
+  state.generate();
+  assert.equal(useLottoStore.getState().numbers, null);
+  assert.equal(
+    useLottoStore.getState().checked["recent-5-times-not-appeared"],
+    true,
+  );
+  assert.equal(useLottoStore.getState().canUseCarryOver, false);
+  state.setChecked("recent-5-times-not-appeared", false);
+  state.generate();
+  assert.equal(useLottoStore.getState().numbers?.length, 6);
+  state.setDrawData({
+    ...completeData(),
+    checkedAt: until,
+    validUntil: "2026-11-07T11:35:00Z",
+    latestEpisode: 1248,
+    draws: [draw(1248), ...completeData().draws.slice(0, 4)],
+  });
+  assert.equal(useLottoStore.getState().canUseRecentFive, true);
+});
