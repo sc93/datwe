@@ -1,4 +1,4 @@
-import type { LottoDraw } from "../lotto-data";
+import type { LottoDraw } from "../../lotto/lotto-data";
 import {
   canonicalDraw,
   drawHash,

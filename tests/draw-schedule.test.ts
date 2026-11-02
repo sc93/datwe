@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { drawBoundary, latestValidity } from "../src/lib/draw-schedule";
+import { drawBoundary, latestValidity } from "../src/lib/lotto/draw-schedule";
 import { draw } from "./lotto-fixtures";
 
 test("한국시간 토요일20:35 경계 전까지 이전 최신을 사용하고 이후 제한한다", () => {

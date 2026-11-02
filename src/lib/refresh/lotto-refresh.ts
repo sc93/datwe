@@ -2,7 +2,7 @@ import {
   getLottoDataAtTime,
   type LottoData,
   parseRecentDatabaseData,
-} from "./lotto-data";
+} from "../lotto/lotto-data";
 
 export const RECENT_RECHECK_MS = 60000;
 

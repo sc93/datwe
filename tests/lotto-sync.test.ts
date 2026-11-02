@@ -4,12 +4,12 @@ import test from "node:test";
 
 import { PGlite } from "@electric-sql/pglite";
 
+import { runSync } from "../src/lib/server/lotto-archive/lotto-sync";
 import {
   canonicalDraw,
   createOfficialSource,
-} from "../src/lib/lotto-archive/source";
-import { createArchiveStore } from "../src/lib/lotto-archive/store";
-import { runSync } from "../src/lib/lotto-sync";
+} from "../src/lib/server/lotto-archive/source";
+import { createArchiveStore } from "../src/lib/server/lotto-archive/store";
 
 const latest = {
   episode: 1247,

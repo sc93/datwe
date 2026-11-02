@@ -5,7 +5,7 @@ import {
   createDrawReader,
   type DrawCache,
   type DrawSnapshot,
-} from "../src/lib/draw-reader";
+} from "../src/lib/server/draw-reader";
 import { draw } from "./lotto-fixtures";
 
 const snapshot = (episode = 1247): DrawSnapshot => ({

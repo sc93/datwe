@@ -1,4 +1,4 @@
-import type { LottoDraw } from "./lotto-data";
+import type { LottoDraw } from "../lotto/lotto-data";
 
 export const DRAW_ENDPOINT =
   "https://www.dhlottery.co.kr/lt645/selectPstLt645Info.do";

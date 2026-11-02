@@ -5,7 +5,7 @@ import Link from "next/link";
 
 import { DrawNumbers } from "@/components/draw-numbers";
 import { Button } from "@/components/ui/button";
-import type { LottoData } from "@/lib/lotto-data";
+import type { LottoData } from "@/lib/lotto/lotto-data";
 
 import { trackLottoEvent } from "../_lib/analytics";
 

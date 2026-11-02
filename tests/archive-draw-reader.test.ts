@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { mock, test } from "node:test";
 
-import { createArchiveDrawReader } from "../src/lib/archive-draw-reader";
-import { createArchiveReader } from "../src/lib/lotto-archive/store";
+import { createArchiveDrawReader } from "../src/lib/server/archive-draw-reader";
+import { createArchiveReader } from "../src/lib/server/lotto-archive/store";
 import { draw } from "./lotto-fixtures";
 
 function database(missing: number[] = []) {
@@ -85,7 +85,7 @@ test("DB 장애에 원천 fallback하지 않고 추첨 후에도 과거 기록�
 test("정상 DB 캐시는 장애에도 원천 확인시각을 유지하고 갱신 뒤 추가 적재를 반영한다", async () => {
   const cache = new Map<
     string,
-    import("../src/lib/draw-reader").DrawSnapshot
+    import("../src/lib/server/draw-reader").DrawSnapshot
   >();
   let missing = [1245];
   let offline = false;

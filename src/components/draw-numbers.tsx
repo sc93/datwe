@@ -1,6 +1,6 @@
 import { Plus } from "lucide-react";
 
-import type { LottoDraw } from "@/lib/lotto-data";
+import type { LottoDraw } from "@/lib/lotto/lotto-data";
 
 import { LottoBall } from "./lotto-ball";
 

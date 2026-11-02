@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-import { type LottoDraw, parseDrawResponse } from "../lotto-data";
+import { type LottoDraw, parseDrawResponse } from "../../lotto/lotto-data";
 
 const ENDPOINT = "https://www.dhlottery.co.kr/lt645/selectPstLt645Info.do";
 export type FailureCode =

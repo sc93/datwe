@@ -1,10 +1,10 @@
 import { revalidateTag } from "next/cache";
 
-import { handleSyncRequest } from "@/lib/lotto-archive/admin";
-import { createOfficialSource } from "@/lib/lotto-archive/source";
-import { invalidateDrawCaches } from "@/lib/lotto-cache";
-import { archiveWriter } from "@/lib/lotto-db";
-import { runSync } from "@/lib/lotto-sync";
+import { handleSyncRequest } from "@/lib/server/lotto-archive/admin";
+import { runSync } from "@/lib/server/lotto-archive/lotto-sync";
+import { createOfficialSource } from "@/lib/server/lotto-archive/source";
+import { invalidateDrawCaches } from "@/lib/server/lotto-cache";
+import { archiveWriter } from "@/lib/server/lotto-db";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;

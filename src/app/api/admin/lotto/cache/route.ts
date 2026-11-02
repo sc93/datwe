@@ -1,7 +1,7 @@
 import { revalidateTag } from "next/cache";
 
-import { handleSyncRequest } from "@/lib/lotto-archive/admin";
-import { invalidateDrawCaches } from "@/lib/lotto-cache";
+import { handleSyncRequest } from "@/lib/server/lotto-archive/admin";
+import { invalidateDrawCaches } from "@/lib/server/lotto-cache";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

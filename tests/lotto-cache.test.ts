@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { drawCacheTags, invalidateDrawCaches } from "../src/lib/lotto-cache";
+import {
+  drawCacheTags,
+  invalidateDrawCaches,
+} from "../src/lib/server/lotto-cache";
 
 test("정기 수집·외부 적재는 회차·목록·최신의 같은 캐시 태그를 갱신한다", async () => {
   assert.deepEqual(drawCacheTags("1247"), ["lotto-db-round-1247"]);

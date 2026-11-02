@@ -1,4 +1,4 @@
-import type { LottoData, LottoDraw } from "../src/lib/lotto-data";
+import type { LottoData, LottoDraw } from "../src/lib/lotto/lotto-data";
 
 export function rawDraw(episode = 1247) {
   const date = new Date(Date.UTC(2026, 9, 24 - (1247 - episode) * 7));

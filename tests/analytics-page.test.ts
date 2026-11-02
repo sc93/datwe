@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { analyticsPage } from "../src/lib/analytics-page";
+import { analyticsPage } from "../src/lib/analytics/analytics-page";
 test("분석 경로와 제목에 실제 회차·입력 원문을 포함하지 않는다", () => {
   for (const path of ["/draw/600", "/draw/1247"]) {
     const page = analyticsPage(path);

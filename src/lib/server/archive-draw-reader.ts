@@ -1,7 +1,7 @@
+import { type DrawSchedule, latestValidity } from "../lotto/draw-schedule";
+import { getLottoDataAtTime, type LottoData } from "../lotto/lotto-data";
 import { createDrawReader, type DrawCache } from "./draw-reader";
-import { type DrawSchedule, latestValidity } from "./draw-schedule";
 import type { createArchiveReader } from "./lotto-archive/store";
-import { getLottoDataAtTime, type LottoData } from "./lotto-data";
 
 type Options = {
   database: () => Promise<ReturnType<typeof createArchiveReader>>;

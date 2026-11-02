@@ -4,7 +4,7 @@ import test from "node:test";
 import {
   checkDatabaseTarget,
   handleSyncRequest,
-} from "../src/lib/lotto-archive/admin";
+} from "../src/lib/server/lotto-archive/admin";
 
 const env = {
   VERCEL_ENV: "production",
@@ -134,7 +134,8 @@ test("격리 DB 대상 확인은 운영 호스트·혼합 자격·소유자 자�
 });
 
 test("로컬 reader는 운영 데이터를 읽되 Preview·writer는 격리 대상을 유지한다", async () => {
-  const { databaseTarget } = await import("../src/lib/lotto-archive/admin");
+  const { databaseTarget } =
+    await import("../src/lib/server/lotto-archive/admin");
   assert.equal(databaseTarget("reader", {}), "production");
   assert.equal(
     databaseTarget("reader", { VERCEL_ENV: "development" }),

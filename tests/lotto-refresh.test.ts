@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { createRecentRefresh } from "../src/lib/lotto-refresh";
+import { createRecentRefresh } from "../src/lib/refresh/lotto-refresh";
 import { completeData } from "./lotto-fixtures";
 
 test("클라이언트는 DATWE API만 재확인하고 동시 요청과60초내 반복을 합친다", async () => {

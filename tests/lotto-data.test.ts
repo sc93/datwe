@@ -6,7 +6,7 @@ import {
   getLottoDataAtTime,
   type LottoData,
   parseDrawResponse,
-} from "../src/lib/lotto-data";
+} from "../src/lib/lotto/lotto-data";
 import { completeData, draw, rawDraw, response } from "./lotto-fixtures";
 
 test("실제 응답 필드에서 회차·날짜·본번호·보너스를 분리한다", () => {

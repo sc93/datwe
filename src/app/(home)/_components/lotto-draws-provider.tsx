@@ -2,8 +2,8 @@
 
 import { useEffect } from "react";
 
-import { getLottoDataAtTime, type LottoData } from "@/lib/lotto-data";
-import { RECENT_RECHECK_MS } from "@/lib/lotto-refresh";
+import { getLottoDataAtTime, type LottoData } from "@/lib/lotto/lotto-data";
+import { RECENT_RECHECK_MS } from "@/lib/refresh/lotto-refresh";
 
 import { useLottoStore } from "../_store/lotto-store";
 

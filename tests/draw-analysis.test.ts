@@ -6,8 +6,8 @@ import {
   type LottoOptionId,
   matchesLottoConditions,
 } from "../src/app/(home)/_lib/lotto-conditions";
-import { analyzeDraw, summarizeDraw } from "../src/lib/draw-analysis";
-import type { LottoDraw } from "../src/lib/lotto-data";
+import { analyzeDraw, summarizeDraw } from "../src/lib/lotto/draw-analysis";
+import type { LottoDraw } from "../src/lib/lotto/lotto-data";
 
 function draw(
   episode: number,

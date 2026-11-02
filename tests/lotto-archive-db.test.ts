@@ -4,7 +4,7 @@ import test from "node:test";
 
 import { PGlite } from "@electric-sql/pglite";
 
-import { createArchiveReader } from "../src/lib/lotto-archive/store";
+import { createArchiveReader } from "../src/lib/server/lotto-archive/store";
 
 const owner = "00000000-0000-4000-8000-000000000001";
 const other = "00000000-0000-4000-8000-000000000002";

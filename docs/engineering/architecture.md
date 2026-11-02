@@ -4,7 +4,7 @@
 - `src/app/(home)/_components/`: 메인 화면과 조건 UI.
 - `src/app/(home)/_store/lotto-store.ts`: 클라이언트 상태.
 - `src/app/(home)/_lib/lotto-conditions.ts`: 번호 후보 및 생성 규칙.
-- `src/lib/draw-db.ts`: 최근5회·단건·구간·이전5회 공개 DB 조회와 Next 캐시 연결.
+- `src/lib/server/draw-db.ts`: 최근5회·단건·구간·이전5회 공개 DB 조회와 Next 캐시 연결.
 - `src/app/api/lotto/`: 회차 API.
 - `src/components/ui/`: 공통 UI 기본 요소.
 - `src/app/globals.css`: 공통 스타일과 토큰.
@@ -12,6 +12,13 @@
 - `@/*`는 `src/*` 별칭이다. 셸에서 괄호가 포함된 경로는 따옴표로 감싼다.
 
 ## 구현 원칙
+
+- `src/lib/lotto/`: 회차 데이터 계약과 검증, 번호 계산·분석, 추첨 일정.
+- `src/lib/server/`: DB 조회와 연결, 서버 캐시. `lotto-archive/`는 관리 인증·공식 수집·SQL·동기화를 담당한다.
+- `src/lib/refresh/`: 클라이언트 재조회와 기존 조회 결과 병합.
+- `src/lib/draw/`: 회차 화면의 상세 조회 조합, 검색·이동, metadata.
+- `src/lib/analytics/`: 방문 분석 정책과 검색 후 상세 방문 연결.
+- `src/lib/utils.ts`: UI 공통 클래스 병합. 폴더명만으로 서버 실행이 강제되지 않으므로 DB 진입점의 `server-only`와 타입 전용 import를 유지한다.
 
 - 기존 스택과 컴포넌트를 우선 활용한다. 새 라이브러리·서비스·DB는 필요성과 운영 부담을 설명하고 현재 작업 범위에 맞게 결정한다.
 - 유료 서비스, 플랜 변경, 결제, 운영 배포, 도메인·DNS·권한 변경은 명시적인 사용자 요청 없이 수행하지 않는다.
@@ -23,8 +30,8 @@
 
 ## 당첨 회차 데이터
 
-- `src/lib/lotto-data.ts`: 공유 타입, 외부 응답 검증, 조건 사용 가능 여부.
-- `src/lib/archive-draw-reader.ts`는 읽기 전용 DB adapter를 주입해 최근5회·단건·공식 최신·20개 구간·이전5회를 제공한다. `draw-db.ts`가 Next Data Cache와 `lotto-db.ts`의 reader 자격을 연결한다. 로컬 공개 조회는 운영 DB의 같은 기록을 읽고, Preview 조회와 비운영 writer는 격리 대상을 유지한다. 캐시 호스트도 같은 대상 선택을 사용한다. 공개 SSR·metadata·API·재시도에는 이 경계만 사용하며 캐시 miss·미수집·DB 장애에도 원천 호출·수집·쓰기를 하지 않는다. 원천 HTTP 조회는 관리 수집의 `lotto-archive/source.ts`에서만 수행하며 공개 reader에는 HTTP 모드와 fallback이 없다.
+- `src/lib/lotto/lotto-data.ts`: 공유 타입, 외부 응답 검증, 조건 사용 가능 여부.
+- `src/lib/server/archive-draw-reader.ts`는 읽기 전용 DB adapter를 주입해 최근5회·단건·공식 최신·20개 구간·이전5회를 제공한다. `draw-db.ts`가 Next Data Cache와 `lotto-db.ts`의 reader 자격을 연결한다. 로컬 공개 조회는 운영 DB의 같은 기록을 읽고, Preview 조회와 비운영 writer는 격리 대상을 유지한다. 캐시 호스트도 같은 대상 선택을 사용한다. 공개 SSR·metadata·API·재시도에는 이 경계만 사용하며 캐시 miss·미수집·DB 장애에도 원천 호출·수집·쓰기를 하지 않는다. 원천 HTTP 조회는 관리 수집의 `lotto-archive/source.ts`에서만 수행하며 공개 reader에는 HTTP 모드와 fallback이 없다.
 - 회차는 `episode`, `drawDate`(YYYY-MM-DD), 정렬된 본번호6개, `bonus`이며 최신순이다. DB `verified_at`과 공식 최신 view의 `latest_checked_at`을 그대로 사용한다. DB 최대 round나 DB를 읽은 시각으로 공식 최신을 만들지 않는다.
 - 최근 응답은 `fresh`/`partial`/`stale`/`not-collected`/`unavailable`, `checkedAt`, `missingEpisodes`, `validUntil`을 제공한다. `validUntil`은 공식 최신의 다음 추첨 경계이며 최신 미확인 시 null이다. 정상 최신 회차는 5분이 지나도 경계 전까지 사용할 수 있다. 경계 이후에는 기존 번호를 표시하되 최근5회 제외·이월수만 제한한다. 최근5회 제외는 연속5회가 모두 있어야 하고 이월수는 확인된 최신 본번호를 사용한다.
 - `draw-schedule.ts`의 기본 경계는 공식 안내의 토요일20:35경이다. 공식 공지에 따른 일정 변경은 `DRAW_SCHEDULE_EXCEPTIONS`에 회차별 ISO 시각을 기록하며 테스트에 일정을 주입한다. 22시는 수집 목표이지 추첨 경계가 아니다. 공식 최신의 회차·추첨일·추첨 이후 원천 확인시각을 검증하고 다음 경계를 넘겨 유효성을 연장하지 않는다.
@@ -33,7 +40,7 @@
 
 ## 과거 회차 조회 경계
 
-- `src/lib/draw-reader.ts`: 주입한 DB/캐시 스냅샷을 공유하며 생성기의 최근5회 조회와 독립된 단건(`readDraw`), 최신 확인(`readLatest`), 최대20개 구간(`readRange`), 대상 이전 최대5회(`readPrevious`) 조회. DB 스냅샷 로더·최신성 판정·캐시를 주입할 수 있다. `src/lib/draw-db.ts`의 `fetchDraw`/`fetchDrawRange`/`fetchDrawPrevious`가 서버에서 Next Data Cache를 연결한다. `/draw` 및 `/draw/[round]`와 `/api/lotto/draws` 계열 API에 연결한다.
+- `src/lib/server/draw-reader.ts`: 주입한 DB/캐시 스냅샷을 공유하며 생성기의 최근5회 조회와 독립된 단건(`readDraw`), 최신 확인(`readLatest`), 최대20개 구간(`readRange`), 대상 이전 최대5회(`readPrevious`) 조회. DB 스냅샷 로더·최신성 판정·캐시를 주입할 수 있다. `src/lib/server/draw-db.ts`의 `fetchDraw`/`fetchDrawRange`/`fetchDrawPrevious`가 서버에서 Next Data Cache를 연결한다. `/draw` 및 `/draw/[round]`와 `/api/lotto/draws` 계열 API에 연결한다.
 - 구간은 `to`부터 `max(1,to-19)`까지 최신순 슬롯을 유지한다. 누락을 다른 회차로 채우지 않으며 `missingEpisodes`로 보고한다. 목록 조회는 분석용 이전5회를 추가 요청하지 않는다. 상세 대상과 이전 기록은 독립 호출·재시도할 수 있고 같은 회차의 진행 중 요청은 공유한다.
 - 단건은 양의 안전한 정수만 받는다. 구간은 정상 최신 확인값이 있을 때 상한을 검사하고, 기본 최신 구간은 최신 확인이 불가능하면 `latest-unknown`이다. 명시된 과거 구간/단건은 최신 상한을 몰라도 DB에서 조회할 수 있다. 단건 함수 자체는 최신 상한을 추가 조회하지 않으므로 검색의 확인된 상한 검사는 호출 경계에서 수행한다.
 - 슬롯은 `fresh`/`stale`/`not-collected`/`unavailable`/`invalid-range`/`cancelled`, `not-collected`는 DB 미수집이며 DB 장애 `unavailable`과 구분한다. 구간은 추가로 `partial`/`latest-unknown`/`insufficient-history`를 구분한다. `checkedAt`과 `sourceUrl`은 슬롯별로 유지한다. 초기 회차의 이전5회 부족은 `insufficient-history`이며 존재하는 이전 슬롯은 별도로 사용할 수 있다.
@@ -42,8 +49,8 @@
 
 ## 본번호 공통 규칙과 과거 분석
 
-- `src/lib/lotto-rules.ts`는 본번호 유효성·합계·홀짝·연속 구간·번호대별 개수·5열×9행 마킹 위반·합집합/교집합을 계산하는 순수 모듈이다. 생성기와 과거 분석이 같은 계산을 사용한다. 생성기의 개인 입력, 후보 선택, 최신성 검사와 저장 계약은 기존 경계에 둔다.
-- `src/lib/draw-analysis.ts`의 `summarizeDraw(target)`는 목록용 합계·실제 홀짝·연속 구간/길이와 ‘연속 번호 없음’/‘N개 연속’ 문구만 반환한다. 목록 요약에는 번호대별 개수나 판정표를 넣지 않는다. `analyzeDraw(target, history)`는 같은 요약과 상세의 합계·홀짝·3연번·구간·마킹·이전5회·직전1회 7항목을 반환한다. 둘 다 네트워크·현재 시각·개인 입력에 의존하지 않는다.
+- `src/lib/lotto/lotto-rules.ts`는 본번호 유효성·합계·홀짝·연속 구간·번호대별 개수·5열×9행 마킹 위반·합집합/교집합을 계산하는 순수 모듈이다. 생성기와 과거 분석이 같은 계산을 사용한다. 생성기의 개인 입력, 후보 선택, 최신성 검사와 저장 계약은 기존 경계에 둔다.
+- `src/lib/lotto/draw-analysis.ts`의 `summarizeDraw(target)`는 목록용 합계·실제 홀짝·연속 구간/길이와 ‘연속 번호 없음’/‘N개 연속’ 문구만 반환한다. 목록 요약에는 번호대별 개수나 판정표를 넣지 않는다. `analyzeDraw(target, history)`는 같은 요약과 상세의 합계·홀짝·3연번·구간·마킹·이전5회·직전1회 7항목을 반환한다. 둘 다 네트워크·현재 시각·개인 입력에 의존하지 않는다.
 - 대상 회차/날짜/본번호/보너스가 손상되면 두 함수 모두 `null`을 반환한다. 검증된 본번호6개만 계산하며 보너스는 판정에서 제외한다. 입력 배열을 정렬하거나 수정하지 않는다. 구간 분포는 상세에서만 표시할 수 있게 제공한다.
 - 분석 항목은 `status`, 수치/위반번호·방향을 포함한 `value`, `basisEpisodes`, 한국어 기준 `rule`, 판정 불가 `reason`을 가진다. 판정은 `met`/`unmet`/`unavailable`이며 홀짝만 `observed`로 고정한다. 전체 점수·조합 우열·추천 등급은 만들지 않는다.
 - 이전5회와 직전1회는 각각 N-1~N-5, N-1을 회차 번호로 조회한 입력에서 독립 판정한다. 입력 순서와 무관하며 필요한 회차의 중복·손상은 `invalid-history`, 누락은 `missing-history`, N≤5의 이전5회 및 N=1의 직전은 `insufficient-history`다. 해당 항목에 누락/무효 회차를 함께 제공한다. 다른 이전 회차가 부족해도 N-1이 정상이라면 직전1회 판정은 유지한다.

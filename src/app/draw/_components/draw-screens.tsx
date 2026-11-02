@@ -8,11 +8,18 @@ import { type ReactNode, useEffect, useRef, useState } from "react";
 import { trackLottoEvent } from "@/app/(home)/_lib/analytics";
 import { DrawNumbers } from "@/components/draw-numbers";
 import { Button } from "@/components/ui/button";
-import type { DrawDetailData } from "@/lib/draw-detail";
-import { drawHref, listHref, parseRoundInput } from "@/lib/draw-navigation";
-import type { DrawRangeResult, DrawResult } from "@/lib/draw-reader";
-import { mergeDrawRange } from "@/lib/draw-refresh";
-import { consumeSearchVisit, expectSearchVisit } from "@/lib/draw-visit";
+import {
+  consumeSearchVisit,
+  expectSearchVisit,
+} from "@/lib/analytics/draw-visit";
+import type { DrawDetailData } from "@/lib/draw/draw-detail";
+import {
+  drawHref,
+  listHref,
+  parseRoundInput,
+} from "@/lib/draw/draw-navigation";
+import { mergeDrawRange } from "@/lib/refresh/draw-refresh";
+import type { DrawRangeResult, DrawResult } from "@/lib/server/draw-reader";
 
 import {
   AnalysisPanel,

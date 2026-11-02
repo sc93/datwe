@@ -6,8 +6,8 @@ import {
   getDrawAvailability,
   getLottoDataAtTime,
   type LottoData,
-} from "@/lib/lotto-data";
-import { createRecentRefresh } from "@/lib/lotto-refresh";
+} from "@/lib/lotto/lotto-data";
+import { createRecentRefresh } from "@/lib/refresh/lotto-refresh";
 
 import { trackLottoEvent } from "../_lib/analytics";
 import {

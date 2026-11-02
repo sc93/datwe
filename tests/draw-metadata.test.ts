@@ -5,8 +5,11 @@ import {
   drawDetailMetadata,
   drawListMetadata,
   invalidDrawMetadata,
-} from "../src/lib/draw-metadata";
-import type { DrawRangeResult,DrawResult } from "../src/lib/draw-reader";
+} from "../src/lib/draw/draw-metadata";
+import type {
+  DrawRangeResult,
+  DrawResult,
+} from "../src/lib/server/draw-reader";
 import { draw } from "./lotto-fixtures";
 const target: DrawResult = {
   episode: 600,

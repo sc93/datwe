@@ -1,8 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import type { DrawRangeResult, DrawResult } from "../src/lib/draw-reader";
-import { mergeDrawRange } from "../src/lib/draw-refresh";
+import { mergeDrawRange } from "../src/lib/refresh/draw-refresh";
+import type {
+  DrawRangeResult,
+  DrawResult,
+} from "../src/lib/server/draw-reader";
 import { draw } from "./lotto-fixtures";
 
 const slot = (episode: number, found: boolean): DrawResult => ({

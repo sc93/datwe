@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 
-import { fetchRecentDraws } from "@/lib/draw-db";
+import { fetchRecentDraws } from "@/lib/server/draw-db";
 
 import GenBtn from "./_components/gen-btn";
 import LottoDrawsProvider from "./_components/lotto-draws-provider";

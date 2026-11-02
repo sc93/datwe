@@ -7,7 +7,7 @@ import {
   isSumInRange,
   isValidMainNumbers,
   unionNumbers as getAppearedInRecentDraws,
-} from "@/lib/lotto-rules";
+} from "@/lib/lotto/lotto-rules";
 
 import { getStrokeCount } from "./stroke-count";
 

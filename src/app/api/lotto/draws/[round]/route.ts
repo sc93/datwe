@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 
-import { fetchDraw, fetchLatestDraw } from "@/lib/draw-db";
-import { loadDrawDetail } from "@/lib/draw-detail";
-import { parseRoundInput } from "@/lib/draw-navigation";
+import { loadDrawDetail } from "@/lib/draw/draw-detail";
+import { parseRoundInput } from "@/lib/draw/draw-navigation";
+import { fetchDraw, fetchLatestDraw } from "@/lib/server/draw-db";
 
 export async function GET(
   request: Request,

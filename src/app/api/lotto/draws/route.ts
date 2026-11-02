@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
-import { fetchDrawRange } from "@/lib/draw-db";
-import { type DrawQuery, parseDrawQuery } from "@/lib/draw-navigation";
+import { type DrawQuery, parseDrawQuery } from "@/lib/draw/draw-navigation";
+import { fetchDrawRange } from "@/lib/server/draw-db";
 
 export async function GET(request: Request) {
   const params = new URL(request.url).searchParams;

@@ -2,7 +2,11 @@
 import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
 
-import { analyticsEnabled, analyticsPage, GA_ID } from "@/lib/analytics-page";
+import {
+  analyticsEnabled,
+  analyticsPage,
+  GA_ID,
+} from "@/lib/analytics/analytics-page";
 
 /** 향상된 측정의 자동 수집 중지를 운영 계정에서 확인한 경우에만 로드한다. */
 export function Analytics() {
