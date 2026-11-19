@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, ExternalLink, RefreshCw } from "lucide-react";
+import { ArrowRight, ExternalLink, Plus, RefreshCw } from "lucide-react";
 import Link from "next/link";
 
 import { DrawNumbers } from "@/components/draw-numbers";
@@ -177,32 +177,72 @@ export function RecentDrawsView({
 }
 
 export function RecentDrawsLoading() {
+  const placeholder = "bg-muted rounded motion-safe:animate-pulse";
+  const ball =
+    "bg-muted size-9 shrink-0 rounded-full motion-safe:animate-pulse min-[480px]:size-11";
   return (
     <section aria-labelledby="recent-draws-loading-heading" aria-busy="true">
       <span className="text-primary font-mono text-[10px] tracking-[0.15em]">
         WEEKLY RECORD
       </span>
-      <h1
-        id="recent-draws-loading-heading"
-        className="mt-2 text-[22px] font-bold tracking-tight"
-      >
-        최근 당첨번호
-      </h1>
-      <div
-        aria-hidden="true"
-        className="mt-5 flex justify-between gap-1.5 motion-safe:animate-pulse"
-      >
-        {Array.from({ length: 6 }, (_, i) => (
-          <span
-            key={i}
-            className="bg-muted size-9 rounded-full min-[480px]:size-11"
-          />
-        ))}
+      <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+        <h1
+          id="recent-draws-loading-heading"
+          className="text-[22px] font-bold tracking-tight"
+        >
+          최근 당첨번호
+        </h1>
+        <span aria-hidden="true" className={`${placeholder} h-4 w-24`} />
       </div>
-      <p
-        role="status"
-        className="text-muted-foreground mt-4 border-b pb-4 text-xs"
+      <div aria-hidden="true" className="mt-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className={`${placeholder} h-6 w-20`} />
+          <span className={`${placeholder} h-4 w-14`} />
+        </div>
+        <div className="mt-5 mb-6 flex flex-wrap items-start justify-between gap-x-3 gap-y-3">
+          <div className="flex gap-1.5 min-[480px]:gap-2">
+            {Array.from({ length: 6 }, (_, i) => (
+              <span key={i} className={ball} />
+            ))}
+          </div>
+          <div className="ml-auto flex items-start gap-2 border-l pl-3">
+            <Plus className="text-muted-foreground mt-2.5 size-3.5 shrink-0 min-[480px]:mt-3.5" />
+            <div className="flex flex-col items-center gap-1">
+              <span className={ball} />
+              <span className="text-muted-foreground text-[10px]">보너스</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <Link
+        href="/draw"
+        onClick={() => trackLottoEvent({ name: "draw_list_open" })}
+        className="text-primary mt-6 flex min-h-11 items-center justify-between gap-2 border-y py-3 text-sm font-medium"
       >
+        지난 당첨번호 보기 <ArrowRight aria-hidden="true" className="size-4" />
+      </Link>
+      <div className="mt-2 flex flex-wrap items-center justify-between gap-x-4">
+        <a
+          href={OFFICIAL_RESULT_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-muted-foreground inline-flex min-h-11 items-center gap-1 text-[11px] underline underline-offset-4"
+        >
+          동행복권에서 확인 <span className="sr-only">(새 탭)</span>
+          <ExternalLink aria-hidden="true" className="size-3" />
+        </a>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          disabled
+          className="text-primary px-1 text-xs"
+        >
+          <RefreshCw aria-hidden="true" className="motion-safe:animate-spin" />
+          불러오는 중…
+        </Button>
+      </div>
+      <p role="status" className="sr-only">
         당첨번호를 불러오고 있어요. 번호는 먼저 생성할 수 있어요.
       </p>
     </section>
