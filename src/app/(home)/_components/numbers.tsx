@@ -27,6 +27,13 @@ const episodeLabel = (episode: number | null) =>
   episode === null ? "대상 회차 정보 없음" : `대상 제 ${episode}회`;
 type Notice = { error: boolean; text: string } | null;
 
+function savedConditionsLabel(item: SavedNumber) {
+  if (item.conditions.length)
+    return item.conditions.map(conditionLabel).join(" · ");
+  if (item.id.startsWith("legacy-")) return "기존 기록 · 조건 정보 없음";
+  return "조건 없이 생성";
+}
+
 export default function Numbers() {
   const numbers = useLottoStore((s) => s.numbers);
   const error = useLottoStore((s) => s.error);
@@ -116,6 +123,72 @@ export default function Numbers() {
     if (!result.error) trackLottoEvent({ name: "copy_complete", source });
   };
 
+  function renderSavedNumbers() {
+    if (!loaded) {
+      return (
+        <p role="status" className="text-muted-foreground text-sm">
+          저장 기록을 불러오고 있어요.
+        </p>
+      );
+    }
+    if (saved.length === 0) {
+      return (
+        <p className="text-muted-foreground text-sm">
+          {storageError
+            ? "표시할 수 있는 저장 기록이 없어요."
+            : "저장한 번호가 없어요."}
+        </p>
+      );
+    }
+    return (
+      <ul className="space-y-3">
+        {saved.map((item, index) => (
+          <li
+            key={item.id}
+            className="bg-background space-y-3 rounded-xl border p-3"
+          >
+            <div className="text-muted-foreground flex flex-wrap justify-between gap-2 text-xs">
+              <span>{episodeLabel(item.targetEpisode)}</span>
+              <span>저장 {formatSavedAt(item.savedAt)}</span>
+            </div>
+            <div
+              className="flex flex-wrap items-center gap-1.5"
+              aria-label={`저장 번호 ${item.numbers.join(", ")}`}
+            >
+              {item.numbers.map((n) => (
+                <LottoBall key={n} number={n} size="sm" />
+              ))}
+            </div>
+            <p className="text-muted-foreground text-xs leading-5">
+              조건: {savedConditionsLabel(item)}
+            </p>
+            <div className="flex justify-end gap-2 border-t border-dashed pt-2">
+              <Button
+                type="button"
+                variant="ghost"
+                className="min-h-11"
+                aria-label={`${index + 1}번째 저장 번호 복사`}
+                onClick={() => void handleCopy(item.numbers, "saved")}
+              >
+                복사
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                className="text-muted-foreground min-h-11"
+                aria-label={`${index + 1}번째 저장 번호 삭제`}
+                id={`saved-delete-${item.id}`}
+                disabled={!!storageError}
+                onClick={() => handleRemove(item.id)}
+              >
+                삭제
+              </Button>
+            </div>
+          </li>
+        ))}
+      </ul>
+    );
+  }
   return (
     <section id="lotto-result" className="mt-8 scroll-mt-6 space-y-3">
       <div>
@@ -235,69 +308,7 @@ export default function Numbers() {
             </Button>
           </div>
         )}
-        {!loaded ? (
-          <p role="status" className="text-muted-foreground text-sm">
-            저장 기록을 불러오고 있어요.
-          </p>
-        ) : saved.length === 0 ? (
-          <p className="text-muted-foreground text-sm">
-            {storageError
-              ? "표시할 수 있는 저장 기록이 없어요."
-              : "저장한 번호가 없어요."}
-          </p>
-        ) : (
-          <ul className="space-y-3">
-            {saved.map((item, index) => (
-              <li
-                key={item.id}
-                className="bg-background space-y-3 rounded-xl border p-3"
-              >
-                <div className="text-muted-foreground flex flex-wrap justify-between gap-2 text-xs">
-                  <span>{episodeLabel(item.targetEpisode)}</span>
-                  <span>저장 {formatSavedAt(item.savedAt)}</span>
-                </div>
-                <div
-                  className="flex flex-wrap items-center gap-1.5"
-                  aria-label={`저장 번호 ${item.numbers.join(", ")}`}
-                >
-                  {item.numbers.map((n) => (
-                    <LottoBall key={n} number={n} size="sm" />
-                  ))}
-                </div>
-                <p className="text-muted-foreground text-xs leading-5">
-                  조건:{" "}
-                  {item.conditions.length
-                    ? item.conditions.map(conditionLabel).join(" · ")
-                    : item.id.startsWith("legacy-")
-                      ? "기존 기록 · 조건 정보 없음"
-                      : "조건 없이 생성"}
-                </p>
-                <div className="flex justify-end gap-2 border-t border-dashed pt-2">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    className="min-h-11"
-                    aria-label={`${index + 1}번째 저장 번호 복사`}
-                    onClick={() => void handleCopy(item.numbers, "saved")}
-                  >
-                    복사
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    className="text-muted-foreground min-h-11"
-                    aria-label={`${index + 1}번째 저장 번호 삭제`}
-                    id={`saved-delete-${item.id}`}
-                    disabled={!!storageError}
-                    onClick={() => handleRemove(item.id)}
-                  >
-                    삭제
-                  </Button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
+        {renderSavedNumbers()}
       </div>
     </section>
   );

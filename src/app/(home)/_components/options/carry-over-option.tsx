@@ -35,6 +35,18 @@ export default function CarryOverOption() {
     setOpen(false);
   };
 
+  function getValueLabel() {
+    if (!available) {
+      if (checked) {
+        return "최신 회차 확인 필요 · 해제 가능";
+      }
+      return "최신 회차 확인 필요";
+    }
+    if (carryOverNumber != null) {
+      return `직전 회차 번호 ${carryOverNumber}`;
+    }
+    return null;
+  }
   return (
     <>
       <OptionCheckbox
@@ -51,15 +63,7 @@ export default function CarryOverOption() {
           await useLottoStore.getState().refreshDrawData();
           setOpen(true);
         }}
-        valueLabel={
-          !available
-            ? checked
-              ? "최신 회차 확인 필요 · 해제 가능"
-              : "최신 회차 확인 필요"
-            : carryOverNumber != null
-              ? `직전 회차 번호 ${carryOverNumber}`
-              : null
-        }
+        valueLabel={getValueLabel()}
       />
       <Dialog open={open} onOpenChange={(o) => !o && setOpen(false)}>
         <DialogContent>

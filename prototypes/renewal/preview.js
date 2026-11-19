@@ -24,15 +24,11 @@ let mode = "lucky";
 let failure = false;
 const dialog = byId("number-dialog");
 function color(n) {
-  return n <= 10
-    ? "yellow"
-    : n <= 20
-      ? "blue"
-      : n <= 30
-        ? "red"
-        : n <= 40
-          ? "gray"
-          : "green";
+  if (n <= 10) return "yellow";
+  if (n <= 20) return "blue";
+  if (n <= 30) return "red";
+  if (n <= 40) return "gray";
+  return "green";
 }
 function balls(numbers) {
   return numbers

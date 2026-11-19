@@ -17,12 +17,16 @@ export async function GET(request: Request) {
       { status: 400, headers: { "Cache-Control": "no-store" } },
     );
   const data = await fetchDrawRange(parsed.to, request.signal);
-  const status =
-    data.status === "invalid-range"
-      ? 400
-      : ["unavailable", "latest-unknown"].includes(data.status)
-        ? 503
-        : 200;
+  function getResponseStatus() {
+    if (data.status === "invalid-range") {
+      return 400;
+    }
+    if (["unavailable", "latest-unknown"].includes(data.status)) {
+      return 503;
+    }
+    return 200;
+  }
+  const status = getResponseStatus();
   return NextResponse.json(data, {
     status,
     headers: { "Cache-Control": "no-store" },

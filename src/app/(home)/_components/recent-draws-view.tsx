@@ -11,6 +11,35 @@ import { trackLottoEvent } from "../_lib/analytics";
 
 const OFFICIAL_RESULT_URL = "https://www.dhlottery.co.kr/lt645/result";
 
+const STATUS_LABELS = {
+  fresh: "추첨 완료",
+  stale: null,
+  partial: "일부 기록 누락",
+  "not-collected": "일부 기록 누락",
+  unavailable: "일부 기록 누락",
+} satisfies Record<LottoData["status"], string | null>;
+
+const PARTIAL_NOTICE = {
+  title: "일부 회차를 확인하지 못했어요",
+  description:
+    "확인된 회차만 표시해요. 최근 5회 제외는 기록이 모두 확인된 뒤 사용할 수 있어요.",
+};
+const NOTICE_CONTENT = {
+  fresh: PARTIAL_NOTICE,
+  stale: PARTIAL_NOTICE,
+  partial: PARTIAL_NOTICE,
+  "not-collected": {
+    title: "아직 수집한 당첨번호가 없어요",
+    description:
+      "기록이 준비되면 확인할 수 있어요. 일반 번호 생성은 사용할 수 있어요.",
+  },
+  unavailable: {
+    title: "당첨번호를 불러오지 못했어요",
+    description:
+      "잠시 후 다시 확인해 주세요. 일반 번호 생성은 사용할 수 있어요.",
+  },
+} satisfies Record<LottoData["status"], { title: string; description: string }>;
+
 function dateLabel(date: string) {
   return `${date.replaceAll("-", ". ")}.`;
 }
@@ -35,12 +64,16 @@ export function RecentDrawsView({
       ? []
       : [...data.draws].sort((a, b) => b.episode - a.episode).slice(0, 5);
   const latest = draws.find((draw) => draw.episode === data.latestEpisode);
-  const statusLabel =
-    data.status === "fresh"
-      ? "추첨 완료"
-      : data.status === "stale"
-        ? null
-        : "일부 기록 누락";
+  const statusLabel = STATUS_LABELS[data.status];
+  function getRefreshLabel() {
+    if (isRefreshing) {
+      return "불러오는 중…";
+    }
+    if (data.status === "unavailable") {
+      return "다시 불러오기";
+    }
+    return "새로고침";
+  }
   return (
     <section aria-labelledby="recent-draws-heading" aria-busy={isRefreshing}>
       <span className="text-primary font-mono text-[10px] tracking-[0.15em]">
@@ -85,18 +118,10 @@ export function RecentDrawsView({
           className="bg-muted mt-4 rounded-xl border p-4 text-xs leading-6"
         >
           <strong className="block text-sm font-semibold">
-            {data.status === "not-collected"
-              ? "아직 수집한 당첨번호가 없어요"
-              : data.status === "unavailable"
-                ? "당첨번호를 불러오지 못했어요"
-                : "일부 회차를 확인하지 못했어요"}
+            {NOTICE_CONTENT[data.status].title}
           </strong>
           <p className="text-muted-foreground mt-1">
-            {data.status === "not-collected"
-              ? "기록이 준비되면 확인할 수 있어요. 일반 번호 생성은 사용할 수 있어요."
-              : data.status === "unavailable"
-                ? "잠시 후 다시 확인해 주세요. 일반 번호 생성은 사용할 수 있어요."
-                : "확인된 회차만 표시해요. 최근 5회 제외는 기록이 모두 확인된 뒤 사용할 수 있어요."}
+            {NOTICE_CONTENT[data.status].description}
           </p>
           {data.missingEpisodes.length > 0 && (
             <p className="mt-2">
@@ -144,11 +169,7 @@ export function RecentDrawsView({
             aria-hidden="true"
             className={isRefreshing ? "motion-safe:animate-spin" : undefined}
           />
-          {isRefreshing
-            ? "불러오는 중…"
-            : data.status === "unavailable"
-              ? "다시 불러오기"
-              : "새로고침"}
+          {getRefreshLabel()}
         </Button>
       </div>
     </section>
