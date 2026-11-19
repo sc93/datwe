@@ -72,4 +72,4 @@ npm run build
 - 축소 모션: 배포용 CSS의 `prefers-reduced-motion` 규칙과 생성 후 스크롤 분기를 코드 및 CSSOM으로 확인했습니다. OS 축소 모션을 바꾼 실제 재생 검증은 미실행입니다.
 - 실패 화면: 외부 조회 실패·회차 누락은 렌더 테스트, 저장·복사 실패는 주입 기반 로직 테스트로 확인했습니다. 실제 브라우저의 저장소·클립보드 권한을 강제로 바꾸는 검증은 미실행입니다.
 
-사용자 최종 검토에는 검색·공유 문구의 자연스러움과 사용 흐름·디자인 판단이 남아 있습니다. 기획·티켓 상태는 [GitHub Issues](https://github.com/sc93/datwe/issues)에서만 관리합니다.
+사용자 최종 검토에는 검색·공유 문구의 자연스러움과 사용 흐름·디자인 판단이 남아 있습니다. 기획 문서는 `docs/prd/`의 PRD와 `docs/srs/`의 SRS로 구분해 관리하며, 티켓 상태는 [GitHub Issues](https://github.com/sc93/datwe/issues)에서 관리합니다.
