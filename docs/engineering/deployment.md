@@ -14,6 +14,12 @@
 
 운영 배포·도메인·DNS·플랜 변경은 명시적인 요청 범위에서만 수행한다. 실제 운영 주소와 대상 프로젝트를 확인한 뒤 실행하고 결과를 검증한다.
 
+## 폰트 빌드
+
+- Noto Sans KR은 고정 버전의 `@fontsource-variable/noto-sans-kr`에 포함된 CSS·WOFF2를 로컬 자산으로 번들링한다. Google Fonts의 확장자 없는 `/l/font?kit=...` 주소가 Turbopack에서 모듈 해석 오류를 일으키는 경로를 사용하지 않는다. 패키지는 폰트 데이터와 CSS이며 런타임 JavaScript를 추가하지 않는다. 라이선스는 패키지의 `LICENSE`(OFL-1.1)를 따른다.
+- `unicode-range`로 글자 범위별 폰트 다운로드를 유지하고 가변 굵기 100–900과 `font-display: swap`을 사용한다. 한글 전체 파일을 일괄 preload하지 않는다. 로딩 중 대체 폰트와의 글자 폭 차이는 실제 화면에서 확인한다.
+- Geist와 Geist Mono는 기존 `next/font/google` 설정을 유지하므로 빌드 시 Google Fonts 네트워크 접근이 여전히 필요하다. Noto Sans KR 수정으로 전체 빌드의 오프라인 동작을 보장하지 않는다.
+
 ## 공개 DB 조회와 캐시
 
 - 메인·목록·상세·metadata·공개 API는 reader 자격으로 DB/캐시만 읽는다. 원천 fallback과 공개 수집/쓰기는 없다. 설정 누락·권한 오류·DB 장애는 정상 캐시가 없으면 조회 오류로 반환하며 일반 번호 생성은 유지한다.

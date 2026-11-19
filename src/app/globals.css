@@ -2,6 +2,7 @@
 
 @layer base {
   :root {
+    --font-noto-sans-kr: "Noto Sans KR Variable", Arial, sans-serif;
     --background: 48 100% 99.02%;
     --foreground: 127.5 11.11% 14.12%;
     --card: 48 100% 99.02%;

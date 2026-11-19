@@ -14,6 +14,7 @@
     "archive:migrate": "tsx scripts/migrate-archive.ts"
   },
   "dependencies": {
+    "@fontsource-variable/noto-sans-kr": "5.3.1",
     "@neondatabase/serverless": "^1.2.0",
     "cheerio": "^1.2.0",
     "class-variance-authority": "^0.7.1",
