@@ -19,13 +19,17 @@ export async function GET(
     latest: () => fetchLatestDraw(request.signal),
     draw: (n) => fetchDraw(n, request.signal),
   });
+  function getResponseStatus() {
+    if (data.target.status === "invalid-range") {
+      return 400;
+    }
+    if (data.target.status === "unavailable") {
+      return 503;
+    }
+    return 200;
+  }
   return NextResponse.json(data, {
-    status:
-      data.target.status === "invalid-range"
-        ? 400
-        : data.target.status === "unavailable"
-          ? 503
-          : 200,
+    status: getResponseStatus(),
     headers: { "Cache-Control": "no-store" },
   });
 }

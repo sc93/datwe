@@ -210,6 +210,15 @@ export function AnalysisPanel({
           </p>
         </section>
       );
+    function getHistoryNotice() {
+      if (item.reason === "insufficient-history") {
+        if (five) {
+          return "이전 5회 기록이 존재하지 않아요.";
+        }
+        return "이전 회차가 존재하지 않아요.";
+      }
+      return "필요한 이전 기록을 모두 확인하지 못했어요.";
+    }
     return (
       <AnalysisRow
         title={five ? "이전 5회 본번호 제외" : "직전 본번호 정확히 1개"}
@@ -222,13 +231,7 @@ export function AnalysisPanel({
           </p>
         ) : (
           <>
-            <p>
-              {item.reason === "insufficient-history"
-                ? five
-                  ? "이전 5회 기록이 존재하지 않아요."
-                  : "이전 회차가 존재하지 않아요."
-                : "필요한 이전 기록을 모두 확인하지 못했어요."}
-            </p>
+            <p>{getHistoryNotice()}</p>
             {item.missingEpisodes.length > 0 && (
               <p>미확인 회차: {item.missingEpisodes.join(", ")}</p>
             )}
@@ -274,6 +277,15 @@ export function AnalysisPanel({
                 unavailable: "판정 불가",
                 observed: `홀수 ${analysis.summary.oddCount} · 짝수 ${analysis.summary.evenCount}`,
               }[item.status];
+          function getStatusColor() {
+            if (item.status === "unmet") {
+              return "text-destructive";
+            }
+            if (item.status === "met") {
+              return "text-primary";
+            }
+            return "text-muted-foreground";
+          }
           return (
             <div
               key={title}
@@ -281,7 +293,7 @@ export function AnalysisPanel({
             >
               <dt className="min-w-0 text-sm">{title}</dt>
               <dd
-                className={`shrink-0 text-xs font-medium ${item.status === "unmet" ? "text-destructive" : item.status === "met" ? "text-primary" : "text-muted-foreground"}`}
+                className={`shrink-0 text-xs font-medium ${getStatusColor()}`}
               >
                 {label}
               </dd>

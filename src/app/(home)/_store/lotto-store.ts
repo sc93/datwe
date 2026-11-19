@@ -77,12 +77,16 @@ export const useLottoStore = create<LottoState & LottoActions>((set, get) => ({
   setChecked: (id, value) => {
     const data = get().drawData;
     if (data) get().setDrawData(data);
-    const other =
-      id === "carry-over-one"
-        ? "recent-5-times-not-appeared"
-        : id === "recent-5-times-not-appeared"
-          ? "carry-over-one"
-          : null;
+    function getConflictingOption() {
+      if (id === "carry-over-one") {
+        return "recent-5-times-not-appeared" as const;
+      }
+      if (id === "recent-5-times-not-appeared") {
+        return "carry-over-one" as const;
+      }
+      return null;
+    }
+    const other = getConflictingOption();
     if (value && other && get().checked[other]) {
       set({
         numbers: null,

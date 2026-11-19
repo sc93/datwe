@@ -12,6 +12,7 @@ const eslintConfig = defineConfig([
       "simple-import-sort": simpleImportSort,
     },
     rules: {
+      "no-nested-ternary": "error",
       "simple-import-sort/imports": "error",
       "simple-import-sort/exports": "error",
     },

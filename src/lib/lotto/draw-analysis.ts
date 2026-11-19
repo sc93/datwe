@@ -143,20 +143,34 @@ export function analyzeDraw(
         invalidEpisodes.push(ep);
       else draws.push(records[0]);
     }
-    const reason =
-      n <= count
-        ? "insufficient-history"
-        : invalidEpisodes.length
-          ? "invalid-history"
-          : missingEpisodes.length
-            ? "missing-history"
-            : null;
+    function getHistoryReason() {
+      if (n <= count) {
+        return "insufficient-history" as const;
+      }
+      if (invalidEpisodes.length) {
+        return "invalid-history" as const;
+      }
+      if (missingEpisodes.length) {
+        return "missing-history" as const;
+      }
+      return null;
+    }
+    const reason = getHistoryReason();
     const matched = reason
       ? []
       : intersectNumbers(
           target.numbers,
           unionNumbers(draws.map((draw) => draw.numbers)),
         );
+    function getHistoryStatus() {
+      if (reason) {
+        return "unavailable" as const;
+      }
+      if (matched.length === (count === 5 ? 0 : 1)) {
+        return "met" as const;
+      }
+      return "unmet" as const;
+    }
     return {
       basisEpisodes,
       rule,
@@ -166,11 +180,7 @@ export function analyzeDraw(
       value: reason
         ? null
         : { matchedNumbers: matched, matchedCount: matched.length },
-      status: reason
-        ? "unavailable"
-        : matched.length === (count === 5 ? 0 : 1)
-          ? "met"
-          : "unmet",
+      status: getHistoryStatus(),
     };
   }
 

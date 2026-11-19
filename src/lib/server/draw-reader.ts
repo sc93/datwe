@@ -177,6 +177,27 @@ export function createDrawReader(options: ReaderOptions) {
     forced?: DrawRangeResult["status"],
   ): DrawRangeResult {
     const good = slots.filter((slot) => slot.draw !== null);
+    function getRangeStatus() {
+      if (slots.some((s) => s.status === "cancelled")) {
+        return "cancelled" as const;
+      }
+      if (good.length === slots.length && good.length > 0) {
+        if (good.some((s) => s.status === "stale")) {
+          return "stale" as const;
+        }
+        return "fresh" as const;
+      }
+      if (good.length > 0) {
+        return "partial" as const;
+      }
+      if (
+        slots.length > 0 &&
+        slots.every((s) => s.status === "not-collected")
+      ) {
+        return "not-collected" as const;
+      }
+      return "unavailable" as const;
+    }
     return {
       from,
       to,
@@ -185,20 +206,7 @@ export function createDrawReader(options: ReaderOptions) {
       missingEpisodes: slots
         .filter((slot) => slot.draw === null && slot.episode !== null)
         .map((slot) => slot.episode!),
-      status:
-        forced ??
-        (slots.some((s) => s.status === "cancelled")
-          ? "cancelled"
-          : good.length === slots.length && good.length > 0
-            ? good.some((s) => s.status === "stale")
-              ? "stale"
-              : "fresh"
-            : good.length > 0
-              ? "partial"
-              : slots.length > 0 &&
-                  slots.every((s) => s.status === "not-collected")
-                ? "not-collected"
-                : "unavailable"),
+      status: forced ?? getRangeStatus(),
     };
   }
 
@@ -214,11 +222,13 @@ export function createDrawReader(options: ReaderOptions) {
         while (cursor < episodes.length) {
           const index = cursor++;
           const n = episodes[index];
-          slots[index] = request.signal?.aborted
-            ? failureResult(n, "cancelled")
-            : seed?.draw?.episode === n
-              ? seed
-              : await read(n, request);
+          if (request.signal?.aborted) {
+            slots[index] = failureResult(n, "cancelled");
+          } else if (seed?.draw?.episode === n) {
+            slots[index] = seed;
+          } else {
+            slots[index] = await read(n, request);
+          }
         }
       }),
     );
@@ -272,16 +282,21 @@ export function createDrawReader(options: ReaderOptions) {
       const count = Math.min(5, episode - 1);
       const episodes = Array.from({ length: count }, (_, i) => episode - i - 1);
       const slots = await readSlots(episodes, request);
+      function getPreviousStatus() {
+        if (request.signal?.aborted) {
+          return "cancelled" as const;
+        }
+        if (count < 5) {
+          return "insufficient-history" as const;
+        }
+        return undefined;
+      }
       return rangeResult(
         slots,
         count ? episode - count : null,
         count ? episode - 1 : null,
         null,
-        request.signal?.aborted
-          ? "cancelled"
-          : count < 5
-            ? "insufficient-history"
-            : undefined,
+        getPreviousStatus(),
       );
     },
   };

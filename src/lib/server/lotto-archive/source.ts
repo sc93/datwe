@@ -155,13 +155,16 @@ export function createOfficialSource(
       return await Promise.race([request(), timeout]);
     } catch (error) {
       if (error instanceof SyncError) throw error;
-      throw new SyncError(
-        signal?.aborted
-          ? "deadline"
-          : controller.signal.aborted
-            ? "timeout"
-            : "network",
-      );
+      function getFailureCode() {
+        if (signal?.aborted) {
+          return "deadline" as const;
+        }
+        if (controller.signal.aborted) {
+          return "timeout" as const;
+        }
+        return "network" as const;
+      }
+      throw new SyncError(getFailureCode());
     } finally {
       clearTimeout(timer);
       signal?.removeEventListener("abort", abort);

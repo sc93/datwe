@@ -169,14 +169,19 @@ export async function runSync(options: Options): Promise<SyncSummary> {
         for (const round of updated.missing) await collect(round);
       }
     }
-    result.status =
-      result.failed || result.warnings.includes("cache")
-        ? result.succeeded
-          ? "partial"
-          : "failed"
-        : result.succeeded
-          ? "success"
-          : "skipped";
+    function getRunStatus() {
+      if (result.failed || result.warnings.includes("cache")) {
+        if (result.succeeded) {
+          return "partial" as const;
+        }
+        return "failed" as const;
+      }
+      if (result.succeeded) {
+        return "success" as const;
+      }
+      return "skipped" as const;
+    }
+    result.status = getRunStatus();
   } catch (error) {
     result.code = error instanceof SyncError ? error.code : "storage";
     result.status = result.succeeded ? "partial" : "failed";

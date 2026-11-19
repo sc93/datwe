@@ -19,16 +19,22 @@ export function LottoBall({
   className,
   ...props
 }: LottoBallProps) {
-  const color =
-    number <= 10
-      ? "bg-lotto-yellow text-lotto-yellow-foreground"
-      : number <= 20
-        ? "bg-lotto-blue text-lotto-blue-foreground"
-        : number <= 30
-          ? "bg-lotto-red text-lotto-red-foreground"
-          : number <= 40
-            ? "bg-lotto-gray text-lotto-gray-foreground"
-            : "bg-lotto-green text-lotto-green-foreground";
+  function getBallColor() {
+    if (number <= 10) {
+      return "bg-lotto-yellow text-lotto-yellow-foreground";
+    }
+    if (number <= 20) {
+      return "bg-lotto-blue text-lotto-blue-foreground";
+    }
+    if (number <= 30) {
+      return "bg-lotto-red text-lotto-red-foreground";
+    }
+    if (number <= 40) {
+      return "bg-lotto-gray text-lotto-gray-foreground";
+    }
+    return "bg-lotto-green text-lotto-green-foreground";
+  }
+  const color = getBallColor();
 
   return (
     <span

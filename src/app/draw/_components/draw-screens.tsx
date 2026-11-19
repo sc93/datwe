@@ -246,6 +246,92 @@ export function DrawListScreen({
     mergeDrawRange,
   );
   const latest = latestNumber(data.latest);
+  function renderDrawList() {
+    if (data.status === "invalid-range") {
+      return (
+        <Notice title="조회 가능한 범위를 벗어났어요">
+          <Link
+            href="/draw"
+            className="text-primary inline-flex min-h-11 items-center underline"
+          >
+            최신 목록으로
+          </Link>
+        </Notice>
+      );
+    }
+    if (data.to === null) {
+      return (
+        <Notice title="최신 회차를 확인하지 못했어요">
+          최신 목록을 다시 조회하거나 알고 있는 과거 회차를 검색해 주세요.
+        </Notice>
+      );
+    }
+    return (
+      <>
+        <div className="border-primary flex flex-wrap items-center justify-between gap-2 border-b-2 py-3">
+          <h2
+            id="draw-results-heading"
+            tabIndex={-1}
+            className="text-lg font-bold"
+          >
+            {data.to}–{data.from}회
+          </h2>
+          <span className="text-muted-foreground text-xs">
+            최신순 · {data.slots.length}회 구간
+          </span>
+        </div>
+        <RangeNavigation to={data.to} latest={latest} />
+        {data.status === "not-collected" && (
+          <Notice title="아직 수집하지 않은 구간이에요">
+            기록이 적재되면 이 구간에서 확인할 수 있어요.
+          </Notice>
+        )}
+        {data.status === "unavailable" && (
+          <Notice title="당첨번호를 불러오지 못했어요">
+            조회에 실패했어요. 없는 회차라는 뜻은 아니에요.
+          </Notice>
+        )}
+        {data.status === "stale" && (
+          <Notice title="저장된 과거 기록을 표시해요">
+            원천 확인 후 시간이 지난 기록이에요. 다시 조회할 수 있어요.
+          </Notice>
+        )}
+        <ol aria-label="회차별 당첨번호">
+          {data.slots.map((slot) =>
+            slot.draw ? (
+              <DrawCard
+                key={slot.episode}
+                draw={slot.draw}
+                to={to}
+                stale={slot.status === "stale"}
+                checkedAt={slot.checkedAt}
+              />
+            ) : (
+              <li key={slot.episode}>
+                <Notice
+                  title={`제 ${slot.episode}회 ${slot.status === "not-collected" ? "미수집" : "조회 실패"}`}
+                >
+                  <p>다른 회차는 계속 확인할 수 있어요.</p>
+                  <Button
+                    variant="outline"
+                    disabled={busy}
+                    onClick={reload}
+                    className="mt-2 text-xs"
+                  >
+                    누락 회차 다시 불러오기
+                  </Button>
+                </Notice>
+              </li>
+            ),
+          )}
+        </ol>
+        <p className="text-muted-foreground mt-5 text-xs">
+          {data.to}–{data.from}회 구간
+        </p>
+        <RangeNavigation to={data.to} latest={latest} />
+      </>
+    );
+  }
   return (
     <section aria-busy={busy}>
       <Link
@@ -268,84 +354,7 @@ export function DrawListScreen({
             아래는 조회한 과거 기록이에요. 최신 상한은 확인되지 않았어요.
           </Notice>
         )}
-      {data.status === "invalid-range" ? (
-        <Notice title="조회 가능한 범위를 벗어났어요">
-          <Link
-            href="/draw"
-            className="text-primary inline-flex min-h-11 items-center underline"
-          >
-            최신 목록으로
-          </Link>
-        </Notice>
-      ) : data.to === null ? (
-        <Notice title="최신 회차를 확인하지 못했어요">
-          최신 목록을 다시 조회하거나 알고 있는 과거 회차를 검색해 주세요.
-        </Notice>
-      ) : (
-        <>
-          <div className="border-primary flex flex-wrap items-center justify-between gap-2 border-b-2 py-3">
-            <h2
-              id="draw-results-heading"
-              tabIndex={-1}
-              className="text-lg font-bold"
-            >
-              {data.to}–{data.from}회
-            </h2>
-            <span className="text-muted-foreground text-xs">
-              최신순 · {data.slots.length}회 구간
-            </span>
-          </div>
-          <RangeNavigation to={data.to} latest={latest} />
-          {data.status === "not-collected" && (
-            <Notice title="아직 수집하지 않은 구간이에요">
-              기록이 적재되면 이 구간에서 확인할 수 있어요.
-            </Notice>
-          )}
-          {data.status === "unavailable" && (
-            <Notice title="당첨번호를 불러오지 못했어요">
-              조회에 실패했어요. 없는 회차라는 뜻은 아니에요.
-            </Notice>
-          )}
-          {data.status === "stale" && (
-            <Notice title="저장된 과거 기록을 표시해요">
-              원천 확인 후 시간이 지난 기록이에요. 다시 조회할 수 있어요.
-            </Notice>
-          )}
-          <ol aria-label="회차별 당첨번호">
-            {data.slots.map((slot) =>
-              slot.draw ? (
-                <DrawCard
-                  key={slot.episode}
-                  draw={slot.draw}
-                  to={to}
-                  stale={slot.status === "stale"}
-                  checkedAt={slot.checkedAt}
-                />
-              ) : (
-                <li key={slot.episode}>
-                  <Notice
-                    title={`제 ${slot.episode}회 ${slot.status === "not-collected" ? "미수집" : "조회 실패"}`}
-                  >
-                    <p>다른 회차는 계속 확인할 수 있어요.</p>
-                    <Button
-                      variant="outline"
-                      disabled={busy}
-                      onClick={reload}
-                      className="mt-2 text-xs"
-                    >
-                      누락 회차 다시 불러오기
-                    </Button>
-                  </Notice>
-                </li>
-              ),
-            )}
-          </ol>
-          <p className="text-muted-foreground mt-5 text-xs">
-            {data.to}–{data.from}회 구간
-          </p>
-          <RangeNavigation to={data.to} latest={latest} />
-        </>
-      )}
+      {renderDrawList()}
       <Button
         variant="outline"
         onClick={reload}
@@ -390,6 +399,15 @@ export function DrawDetailScreen({
     if (consumeSearchVisit(episode))
       trackLottoEvent({ name: "draw_search_complete" });
   }, [data.target.draw, episode]);
+  function getTargetNotice() {
+    if (target.status === "invalid-range") {
+      return "조회 가능한 범위를 벗어났어요";
+    }
+    if (target.status === "not-collected") {
+      return "아직 수집하지 않은 회차예요";
+    }
+    return "당첨번호를 불러오지 못했어요";
+  }
   return (
     <section aria-busy={busy}>
       <div className="flex flex-wrap justify-between gap-2">
@@ -449,15 +467,7 @@ export function DrawDetailScreen({
           <HistoryAnalysis key={episode} draw={target.draw} />
         </>
       ) : (
-        <Notice
-          title={
-            target.status === "invalid-range"
-              ? "조회 가능한 범위를 벗어났어요"
-              : target.status === "not-collected"
-                ? "아직 수집하지 않은 회차예요"
-                : "당첨번호를 불러오지 못했어요"
-          }
-        >
+        <Notice title={getTargetNotice()}>
           {target.status !== "invalid-range" && (
             <p>조회 실패나 미확인을 없는 회차로 단정하지 않아요.</p>
           )}
